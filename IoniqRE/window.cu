@@ -1,10 +1,15 @@
 #include "window.h"
 
+#include <sstream>
+
 window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	:
 	m_width(width),
 	m_height(height)
 {
+	HRESULT hr;
+	BOOL ok;
+
 	// fill out the window class struct
 	WNDCLASSEX wndClass = {};
 	wndClass.cbSize = sizeof(WNDCLASSEX);
@@ -19,7 +24,10 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	wndClass.lpszMenuName = nullptr;
 	wndClass.lpszClassName = window_class_name;
 	wndClass.hIconSm = nullptr;
-	RegisterClassEx(&wndClass);
+	hr = (HRESULT)RegisterClassEx(&wndClass);
+	if (hr == 0) {
+		throw IONIQWNDEXCEPT_LAST();
+	}
 
 	// create the window
 	RECT client = {};
@@ -27,10 +35,19 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	client.top = 200;
 	client.right = client.left + width;
 	client.bottom = client.top + height;
-	AdjustWindowRect(&client, WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, FALSE);
+	ok = AdjustWindowRect(&client, WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, FALSE);
+	if (ok == 0) {
+		throw IONIQWNDEXCEPT_LAST();
+	}
 	m_hWnd = CreateWindow(window_class_name, "Ioniq Rendering Engine", WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT,
 		client.right - client.left, client.bottom - client.top, nullptr, nullptr, hInstance, this);
-	UpdateWindow(m_hWnd);
+	if (m_hWnd == nullptr) {
+		throw IONIQWNDEXCEPT_LAST();
+	}
+	ok = UpdateWindow(m_hWnd);
+	if (ok == 0) {
+		throw IONIQWNDEXCEPT_LAST();
+	}
 	ShowWindow(m_hWnd, SW_SHOWDEFAULT);
 }
 
@@ -83,4 +100,36 @@ LRESULT window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	}
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+window::exception::exception(int line, const std::string& file, HRESULT hr)
+	:
+	ioniq_exception(line, file),
+	m_hr(hr)
+{
+}
+
+const char* window::exception::what() const
+{
+	std::ostringstream oss;
+	oss << get_type() << std::endl;
+	oss << "[Error Code]: " << m_hr << std::endl;
+	oss << "[Description]: " << get_description() << std::endl;
+	oss << get_origin();
+	m_what_buffer = oss.str();
+	return m_what_buffer.c_str();
+}
+
+std::string window::exception::get_description() const
+{
+	char* msg = nullptr;
+	DWORD len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		nullptr, m_hr, 0, reinterpret_cast<LPSTR>(&msg), 0, nullptr);
+	if (len == 0) {
+		return "Unknown error code";
+	}
+
+	std::string out = msg;
+	LocalFree(msg);
+	return out;
 }

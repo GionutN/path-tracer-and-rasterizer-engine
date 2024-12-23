@@ -7,8 +7,20 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	LPSTR lpCmdLine,
 	int nCmdShow)
 {
-	window w(hInstance, 1920, 1080);
-	while (!w.should_close()) {}
+	try {
+		window w(hInstance, 1920, 1080);
+		while (!w.should_close());
+		return EXIT_SUCCESS;
+	}
+	catch (const ioniq_exception & e) {
+		MessageBox(nullptr, e.what(), e.get_type(), MB_OK | MB_ICONEXCLAMATION);
+	}
+	catch (const std::exception& e) {
+		MessageBox(nullptr, e.what(), "Standard exception", MB_OK | MB_ICONEXCLAMATION);
+	}
+	catch (...) {
+		MessageBox(nullptr, "No details available", "Unknown exception type", MB_OK | MB_ICONEXCLAMATION);
+	}
 
-	return 0;
+	return EXIT_FAILURE;
 }

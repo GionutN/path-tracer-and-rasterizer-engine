@@ -80,10 +80,12 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <CudaCompile Include="ioniq_exception.cu" />
     <CudaCompile Include="main.cu" />
     <CudaCompile Include="window.cu" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ioniq_exception.h" />
     <ClInclude Include="ioniq_windows.h" />
     <ClInclude Include="window.h" />
   </ItemGroup>

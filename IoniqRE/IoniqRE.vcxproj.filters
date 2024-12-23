@@ -15,12 +15,18 @@
     <CudaCompile Include="window.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="ioniq_exception.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="window.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="ioniq_exception.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
