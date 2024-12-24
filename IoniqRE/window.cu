@@ -11,20 +11,20 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	BOOL ok;
 
 	// fill out the window class struct
-	WNDCLASSEX wndClass = {};
-	wndClass.cbSize = sizeof(WNDCLASSEX);
-	wndClass.style = CS_OWNDC;
-	wndClass.lpfnWndProc = HandleMessageSetup;
-	wndClass.cbClsExtra = 0;
-	wndClass.cbWndExtra = 0;
-	wndClass.hInstance = hInstance;
-	wndClass.hIcon = nullptr;
-	wndClass.hCursor = nullptr;
-	wndClass.hbrBackground = nullptr;
-	wndClass.lpszMenuName = nullptr;
-	wndClass.lpszClassName = window_class_name;
-	wndClass.hIconSm = nullptr;
-	hr = (HRESULT)RegisterClassEx(&wndClass);
+	WNDCLASSEX wnd_class = {};
+	wnd_class.cbSize = sizeof(WNDCLASSEX);
+	wnd_class.style = CS_OWNDC;
+	wnd_class.lpfnWndProc = HandleMessageSetup;
+	wnd_class.cbClsExtra = 0;
+	wnd_class.cbWndExtra = 0;
+	wnd_class.hInstance = hInstance;
+	wnd_class.hIcon = nullptr;
+	wnd_class.hCursor = nullptr;
+	wnd_class.hbrBackground = nullptr;
+	wnd_class.lpszMenuName = nullptr;
+	wnd_class.lpszClassName = window_class_name;
+	wnd_class.hIconSm = nullptr;
+	hr = (HRESULT)RegisterClassEx(&wnd_class);
 	if (hr == 0) {
 		throw IONIQWNDEXCEPT_LAST();
 	}
@@ -57,25 +57,12 @@ window::~window()
 	UnregisterClass(window_class_name, GetModuleHandle(nullptr));
 }
 
-bool window::should_close() const
-{
-	MSG msg;
-	while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-		if (msg.message == WM_QUIT)
-			return true;
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-
-	return false;
-}
-
 LRESULT window::HandleMessageSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 	// setup win32 so that it calls our handle message method, which is not static
 	if (msg == WM_NCCREATE) {
-		CREATESTRUCTA* pCreate = reinterpret_cast<CREATESTRUCTA*>(lParam);
-		window* wnd = reinterpret_cast<window*>(pCreate->lpCreateParams);
+		CREATESTRUCTA* create = reinterpret_cast<CREATESTRUCTA*>(lParam);
+		window* wnd = reinterpret_cast<window*>(create->lpCreateParams);
 		SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(wnd));
 		SetWindowLongPtr(hWnd, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&HandleMessageDummy));
 	}

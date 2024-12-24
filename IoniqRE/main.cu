@@ -1,6 +1,7 @@
 ﻿#include "ioniq_windows.h"
 
 #include "window.h"
+#include "application.h"
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -9,7 +10,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 {
 	try {
 		window w(hInstance, 1920, 1080);
-		while (!w.should_close());
+		//TODO: check if the deleter should be null
+		application app(&w);
+
+		while (app.process_message()) {
+			app.run();
+		}
 		return EXIT_SUCCESS;
 	}
 	catch (const ioniq_exception & e) {
