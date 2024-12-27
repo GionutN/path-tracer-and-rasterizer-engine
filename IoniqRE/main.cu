@@ -1,5 +1,6 @@
 ﻿#include "ioniq_windows.h"
 
+#include "core.h"
 #include "window.h"
 #include "application.h"
 
@@ -9,9 +10,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	int nCmdShow)
 {
 	try {
-		window w(hInstance, 1920, 1080);
-		//TODO: check if the deleter should be null
-		application app(&w);
+		// make a shared ptr to a window because a unique ptr can not be passed to the application constructor
+		ref<window> w = std::make_shared<window>(hInstance, 1920, 1080);
+		application app(w);
 
 		while (app.process_message()) {
 			app.run();

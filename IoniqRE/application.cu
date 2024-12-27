@@ -1,6 +1,11 @@
 #include "application.h"
 
-application::application(window* wnd)
+#include <sstream>
+
+#include "keyboard.h"
+#include "mouse.h"
+
+application::application(const ref<window>& wnd)
 	:
 	m_wnd(wnd)
 {
@@ -27,6 +32,9 @@ void application::run()
 
 void application::update_frame()
 {
+	//std::ostringstream oss;
+	//oss << "(" << mouse::get()->get_position().first << ", " << mouse::get()->get_position().second << ")";
+	//m_wnd->set_title(oss.str());
 }
 
 void application::draw_frame()

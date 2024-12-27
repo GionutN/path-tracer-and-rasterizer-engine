@@ -27,6 +27,8 @@ public:
 	window& operator=(const window&) = delete;
 	~window();
 
+	void set_title(const std::string& title);
+
 private:
 	static LRESULT CALLBACK HandleMessageSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	static LRESULT CALLBACK HandleMessageDummy(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -39,6 +41,7 @@ private:
 	const UINT16 m_width;
 	const UINT16 m_height;
 	HWND m_hWnd;
+	std::string m_title;
 
 };
 

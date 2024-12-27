@@ -2,10 +2,15 @@
 
 #include <sstream>
 
+#include "core.h"
+#include "keyboard.h"
+#include "mouse.h"
+
 window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	:
 	m_width(width),
-	m_height(height)
+	m_height(height),
+	m_title("Ioniq Rendering Engine")
 {
 	HRESULT hr;
 	BOOL ok;
@@ -36,25 +41,40 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	client.right = client.left + width;
 	client.bottom = client.top + height;
 	ok = AdjustWindowRect(&client, WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, FALSE);
-	if (ok == 0) {
+	if (!ok) {
 		throw IONIQWNDEXCEPT_LAST();
 	}
-	m_hWnd = CreateWindow(window_class_name, "Ioniq Rendering Engine", WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT,
+	m_hWnd = CreateWindow(window_class_name, m_title.c_str(), WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT,
 		client.right - client.left, client.bottom - client.top, nullptr, nullptr, hInstance, this);
 	if (m_hWnd == nullptr) {
 		throw IONIQWNDEXCEPT_LAST();
 	}
 	ok = UpdateWindow(m_hWnd);
-	if (ok == 0) {
+	if (!ok) {
 		throw IONIQWNDEXCEPT_LAST();
 	}
 	ShowWindow(m_hWnd, SW_SHOWDEFAULT);
+
+	keyboard::init();
+	mouse::init();
 }
 
 window::~window()
 {
+	mouse::shutdown();
+	keyboard::shutdown();
+
 	DestroyWindow(m_hWnd);
 	UnregisterClass(window_class_name, GetModuleHandle(nullptr));
+}
+
+void window::set_title(const std::string& title)
+{
+	m_title = title;
+	BOOL ok = SetWindowText(m_hWnd, m_title.c_str());
+	if (!ok) {
+		throw IONIQWNDEXCEPT_LAST();
+	}
 }
 
 LRESULT window::HandleMessageSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -84,7 +104,64 @@ LRESULT window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 		PostQuitMessage(0);
 		break;
+	case WM_KILLFOCUS:
+		keyboard::get()->clear_states();
+		break;
+
+	// keyboard messages
+	case WM_SYSKEYDOWN:
+	case WM_KEYDOWN:
+		if (!(lParam & BIT(30))) {
+			keyboard::get()->on_key_pressed((uint8_t)wParam);
+		}
+		break;
+	case WM_SYSKEYUP:
+	case WM_KEYUP:
+		keyboard::get()->on_key_released((uint8_t)wParam);
+		break;
+
+	// mouse messages
+	case WM_MOUSEMOVE:
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		if (-1 < p.x && p.x < m_width && -1 < p.y && p.y < m_height) {
+			mouse::get()->on_mouse_move(p.x, p.y);
+			if (!mouse::get()->is_in_window()) {
+				SetCapture(m_hWnd);
+				mouse::get()->on_mouse_enter();
+			}
+		}
+		else if (wParam & (MK_LBUTTON | MK_RBUTTON))
+			mouse::get()->on_mouse_move(p.x, p.y);
+		else {
+			ReleaseCapture();
+			mouse::get()->on_mouse_leave();
+		}
+
+		break;
 	}
+	case WM_LBUTTONDOWN:
+		mouse::get()->on_button_pressed(VK_LBUTTON);
+		break;
+	case WM_RBUTTONDOWN:
+		mouse::get()->on_button_pressed(VK_RBUTTON);
+		break;
+
+	case WM_LBUTTONUP:
+		mouse::get()->on_button_released(VK_LBUTTON);
+		break;
+	case WM_RBUTTONUP:
+		mouse::get()->on_button_released(VK_RBUTTON);
+		break;
+
+	case WM_MOUSEWHEEL:
+	{
+		const short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+		mouse::get()->on_wheel_rotated(delta);
+		break;
+	}
+	}
+
 
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }

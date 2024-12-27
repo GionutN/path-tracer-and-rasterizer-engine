@@ -21,6 +21,12 @@
     <CudaCompile Include="application.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="Keyboard.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="mouse.cu">
+      <Filter>include</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -37,6 +43,12 @@
     </ClInclude>
     <ClInclude Include="core.h">
       <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="Keyboard.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="mouse.h">
+      <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
