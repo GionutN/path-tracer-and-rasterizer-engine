@@ -128,36 +128,61 @@ LRESULT window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			mouse::get()->on_mouse_move(p.x, p.y);
 			if (!mouse::get()->is_in_window()) {
 				SetCapture(m_hWnd);
-				mouse::get()->on_mouse_enter();
+				mouse::get()->on_mouse_enter(p.x, p.y);
 			}
 		}
 		else if (wParam & (MK_LBUTTON | MK_RBUTTON))
 			mouse::get()->on_mouse_move(p.x, p.y);
 		else {
 			ReleaseCapture();
-			mouse::get()->on_mouse_leave();
+			mouse::get()->on_mouse_leave(p.x, p.y);
 		}
 
 		break;
 	}
 	case WM_LBUTTONDOWN:
-		mouse::get()->on_button_pressed(VK_LBUTTON);
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		mouse::get()->on_button_pressed(mouse::button_codes::LEFT, p.x, p.y);
 		break;
+	}
 	case WM_RBUTTONDOWN:
-		mouse::get()->on_button_pressed(VK_RBUTTON);
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		mouse::get()->on_button_pressed(mouse::button_codes::RIGHT, p.x, p.y);
 		break;
+	}
+	case WM_MBUTTONDOWN:
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		mouse::get()->on_button_pressed(mouse::button_codes::MIDDLE, p.x, p.y);
+		break;
+	}
 
 	case WM_LBUTTONUP:
-		mouse::get()->on_button_released(VK_LBUTTON);
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		mouse::get()->on_button_released(mouse::button_codes::LEFT, p.x, p.y);
 		break;
+	}
 	case WM_RBUTTONUP:
-		mouse::get()->on_button_released(VK_RBUTTON);
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		mouse::get()->on_button_released(mouse::button_codes::RIGHT, p.x, p.y);
 		break;
+	}
+	case WM_MBUTTONUP:
+	{
+		const POINTS p = MAKEPOINTS(lParam);
+		mouse::get()->on_button_released(mouse::button_codes::MIDDLE, p.x, p.y);
+		break;
+	}
 
 	case WM_MOUSEWHEEL:
 	{
+		const POINTS p = MAKEPOINTS(lParam);
 		const short delta = GET_WHEEL_DELTA_WPARAM(wParam);
-		mouse::get()->on_wheel_rotated(delta);
+		mouse::get()->on_wheel_rotated(delta, p.x, p.y);
 		break;
 	}
 	}

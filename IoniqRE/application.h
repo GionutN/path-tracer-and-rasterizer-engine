@@ -18,5 +18,6 @@ public:
 private:
 	// use shared ptr instead of unique because it can not be instantiated from the ptr in main
 	ref<window> m_wnd;
+	int numd = 0, numu = 0;
 
 };

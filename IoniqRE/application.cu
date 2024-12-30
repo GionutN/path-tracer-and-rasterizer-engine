@@ -32,9 +32,6 @@ void application::run()
 
 void application::update_frame()
 {
-	//std::ostringstream oss;
-	//oss << "(" << mouse::get()->get_position().first << ", " << mouse::get()->get_position().second << ")";
-	//m_wnd->set_title(oss.str());
 }
 
 void application::draw_frame()

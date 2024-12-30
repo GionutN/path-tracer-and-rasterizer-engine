@@ -19,7 +19,7 @@ private:
 	inline void clear_states() { m_states.reset(); }
 
 public:
-	static constexpr uint16_t num_keys = 256;
+	static constexpr size_t num_keys = 256;
 
 private:
 	keyboard();
