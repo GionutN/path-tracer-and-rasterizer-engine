@@ -31,6 +31,16 @@ mouse* mouse::get()
 	return g_mouse;
 }
 
+bool mouse::button_is_pressed(button_codes btn) const
+{
+	int code = (int)btn;
+	if (code < 0 || code >= (int)button_codes::NUMCODES) {
+		return false;
+	}
+
+	return m_states[code];
+}
+
 mouse::event mouse::get_event()
 {
 	if (m_eventq.empty()) {
@@ -42,7 +52,7 @@ mouse::event mouse::get_event()
 	return result;
 }
 
-mouse::event mouse::peek_event()
+mouse::event mouse::peek_event() const
 {
 	if (m_eventq.empty()) {
 		return event(event::type::INVALID, button_codes::INVALID, NULL, NULL);

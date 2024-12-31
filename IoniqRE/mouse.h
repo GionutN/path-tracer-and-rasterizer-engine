@@ -60,13 +60,13 @@ public:
 	static mouse* get();
 
 public:
-	inline bool button_is_pressed(int8_t btn) const { return m_states[btn]; }
+	bool button_is_pressed(button_codes btn) const;
 	inline bool is_in_window() const { return m_in_window; }
 	inline int16_t get_x() const { return m_coords.first; }
 	inline int16_t get_y() const { return m_coords.second; }
 	inline const std::pair<int16_t, int16_t>& get_position() const { return m_coords; }
 	event get_event();
-	event peek_event();
+	event peek_event() const;
 
 public:
 	static constexpr size_t num_events = 16;
