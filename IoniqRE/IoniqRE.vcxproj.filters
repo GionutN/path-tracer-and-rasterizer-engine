@@ -24,8 +24,11 @@
     <CudaCompile Include="Keyboard.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="timer.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
     <CudaCompile Include="mouse.cu">
-      <Filter>include</Filter>
+      <Filter>src</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>
@@ -47,8 +50,11 @@
     <ClInclude Include="Keyboard.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="timer.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="mouse.h">
-      <Filter>src</Filter>
+      <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

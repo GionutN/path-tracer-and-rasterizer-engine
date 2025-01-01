@@ -5,12 +5,14 @@
 #include "core.h"
 #include "keyboard.h"
 #include "mouse.h"
+#include "timer.h"
 
 window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	:
 	m_width(width),
 	m_height(height),
-	m_title("Ioniq Rendering Engine")
+	m_title("Ioniq Rendering Engine"),
+	m_hInstance(hInstance)
 {
 	HRESULT hr;
 	BOOL ok;
@@ -57,15 +59,17 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 
 	keyboard::init();
 	mouse::init();
+	timer::init();
 }
 
 window::~window()
 {
+	timer::shutdown();
 	mouse::shutdown();
 	keyboard::shutdown();
 
 	DestroyWindow(m_hWnd);
-	UnregisterClass(window_class_name, GetModuleHandle(nullptr));
+	UnregisterClass(window_class_name, m_hInstance);
 }
 
 void window::set_title(const std::string& title)

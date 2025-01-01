@@ -4,6 +4,7 @@
 
 #include "keyboard.h"
 #include "mouse.h"
+#include "timer.h"
 
 application::application(const ref<window>& wnd)
 	:
@@ -32,6 +33,14 @@ void application::run()
 
 void application::update_frame()
 {
+	real dt = timer::get()->get_delta();
+	title_time += dt;
+	if (title_time > 1.0) {
+		std::ostringstream oss;
+		oss << "FPS: " << 1 / dt;
+		m_wnd->set_title(oss.str());
+		title_time = 0.0;
+	}
 }
 
 void application::draw_frame()

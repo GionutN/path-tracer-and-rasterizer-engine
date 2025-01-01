@@ -18,6 +18,6 @@ public:
 private:
 	// use shared ptr instead of unique because it can not be instantiated from the ptr in main
 	ref<window> m_wnd;
-	bool property = false;
+	real title_time = 0.0;
 
 };
