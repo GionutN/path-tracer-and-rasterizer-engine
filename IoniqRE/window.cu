@@ -6,11 +6,12 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "timer.h"
+#include "renderer.h"
 
 window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	:
-	m_width(width),
-	m_height(height),
+	width(width),
+	height(height),
 	m_title("Ioniq Rendering Engine"),
 	m_hInstance(hInstance)
 {
@@ -46,8 +47,12 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	if (!ok) {
 		throw IONIQWNDEXCEPT_LAST();
 	}
-	m_hWnd = CreateWindow(window_class_name, m_title.c_str(), WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, CW_USEDEFAULT, CW_USEDEFAULT,
-		client.right - client.left, client.bottom - client.top, nullptr, nullptr, hInstance, this);
+	m_hWnd = CreateWindow(window_class_name, m_title.c_str(), 
+		WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU, 
+		CW_USEDEFAULT, CW_USEDEFAULT,
+		client.right - client.left, client.bottom - client.top, 
+		nullptr, nullptr, 
+		hInstance, this);
 	if (m_hWnd == nullptr) {
 		throw IONIQWNDEXCEPT_LAST();
 	}
@@ -60,10 +65,12 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 	keyboard::init();
 	mouse::init();
 	timer::init();
+	renderer::init(m_hWnd);
 }
 
 window::~window()
 {
+	renderer::shutdown();
 	timer::shutdown();
 	mouse::shutdown();
 	keyboard::shutdown();
@@ -128,7 +135,7 @@ LRESULT window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_MOUSEMOVE:
 	{
 		const POINTS p = MAKEPOINTS(lParam);
-		if (-1 < p.x && p.x < m_width && -1 < p.y && p.y < m_height) {
+		if (-1 < p.x && p.x < width && -1 < p.y && p.y < height) {
 			mouse::get()->on_mouse_move(p.x, p.y);
 			if (!mouse::get()->is_in_window()) {
 				SetCapture(m_hWnd);

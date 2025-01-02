@@ -36,13 +36,13 @@ private:
 
 public:
 	static constexpr const char* window_class_name = "Ioniq Window Class";
+	const UINT16 width;
+	const UINT16 height;
 
 private:
 	HWND m_hWnd;
 	HINSTANCE m_hInstance;
 
-	const UINT16 m_width;
-	const UINT16 m_height;
 	std::string m_title;
 
 };
