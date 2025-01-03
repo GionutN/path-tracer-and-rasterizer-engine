@@ -205,7 +205,7 @@ LRESULT window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 window::exception::exception(int line, const std::string& file, HRESULT hr)
 	:
 	ioniq_exception(line, file),
-	m_hr(hr)
+	_hr(hr)
 {
 }
 
@@ -213,7 +213,7 @@ const char* window::exception::what() const
 {
 	std::ostringstream oss;
 	oss << get_type() << std::endl;
-	oss << "[Error Code]: " << m_hr << std::endl;
+	oss << "[Error Code]: " << _hr << std::endl;
 	oss << "[Description]: " << get_description() << std::endl;
 	oss << get_origin();
 	m_what_buffer = oss.str();
@@ -224,7 +224,7 @@ std::string window::exception::get_description() const
 {
 	char* msg = nullptr;
 	DWORD len = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		nullptr, m_hr, 0, reinterpret_cast<LPSTR>(&msg), 0, nullptr);
+		nullptr, _hr, 0, reinterpret_cast<LPSTR>(&msg), 0, nullptr);
 	if (len == 0) {
 		return "Unknown error code";
 	}

@@ -13,7 +13,7 @@ public:
 	static void shutdown();
 	static timer* get();
 
-	inline real get_total_time() const { return (std::chrono::high_resolution_clock::now() - m_start).count(); }
+	real get_total_time() const;
 	real get_delta();
 
 private:

@@ -2,8 +2,7 @@
 
 static timer* g_timer;
 
-using namespace std::chrono;
-using namespace std::chrono_literals;
+namespace chr = std::chrono;
 
 void timer::init()
 {
@@ -27,14 +26,20 @@ timer* timer::get()
 
 timer::timer()
 	:
-	m_start(high_resolution_clock::now()),
-	m_last(high_resolution_clock::now())
+	m_start(chr::high_resolution_clock::now()),
+	m_last(chr::high_resolution_clock::now())
 {}
+
+real timer::get_total_time() const
+{
+	const duration_seconds dur = std::chrono::high_resolution_clock::now() - m_start;
+	return dur.count();
+}
 
 real timer::get_delta()
 {
 	const auto old = m_last;
-	m_last = high_resolution_clock::now();
+	m_last = chr::high_resolution_clock::now();
 	const duration_seconds dur = m_last - old;
 	return dur.count();
 }

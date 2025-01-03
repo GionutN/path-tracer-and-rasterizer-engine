@@ -18,7 +18,7 @@ public:
 		std::string get_description() const;
 
 	private:
-		HRESULT m_hr;
+		HRESULT _hr;
 	};
 
 public:
