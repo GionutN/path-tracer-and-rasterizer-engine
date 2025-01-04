@@ -95,6 +95,8 @@ renderer::renderer(HWND hWnd)
 	wrl:: ComPtr<ID3D11Resource> back_buffer;
 	RENDERER_THROW_FAILED(m_swchain->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer));
 	RENDERER_THROW_FAILED(m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
+
+	// some comment for merging
 }
 
 renderer::exception::exception(int line, const std::string& file, HRESULT hr, const std::string& custom_desc)
