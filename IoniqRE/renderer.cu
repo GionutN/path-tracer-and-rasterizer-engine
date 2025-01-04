@@ -46,6 +46,39 @@ void renderer::end_frame()
 	}
 }
 
+void renderer::draw_triangle()
+{
+	// bind the vertex buffer and draw
+	const UINT stride = sizeof(Vertex), offset = 0;
+	m_imctx->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
+	m_imctx->Draw(3, 0);
+}
+
+void renderer::set_triangle()
+{
+	HRESULT hr;
+
+	// basic vertex structure and data
+	const Vertex verts[3] = {
+		{ 0.0,  0.5},
+		{ 0.5, -0.5},
+		{-0.5, -0.5}
+	};
+
+	// create the vertex buffer
+	D3D11_BUFFER_DESC vbdesc = {};
+	vbdesc.ByteWidth = sizeof(verts);
+	vbdesc.Usage = D3D11_USAGE_DEFAULT;
+	vbdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbdesc.CPUAccessFlags = 0;
+	vbdesc.MiscFlags = 0;
+	vbdesc.StructureByteStride = sizeof(Vertex);
+
+	D3D11_SUBRESOURCE_DATA vbdata = {};
+	vbdata.pSysMem = verts;
+	RENDERER_THROW_FAILED(m_device->CreateBuffer(&vbdesc, &vbdata, &vb));
+}
+
 renderer::renderer(HWND hWnd)
 {
 	m_clear[0] = 0.0;
@@ -96,7 +129,7 @@ renderer::renderer(HWND hWnd)
 	RENDERER_THROW_FAILED(m_swchain->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer));
 	RENDERER_THROW_FAILED(m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
 
-	// some comment for merging
+	set_triangle();
 }
 
 renderer::exception::exception(int line, const std::string& file, HRESULT hr, const std::string& custom_desc)

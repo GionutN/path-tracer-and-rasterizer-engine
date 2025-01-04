@@ -47,6 +47,8 @@ void application::draw_frame()
 	clear[0] = std::sin(total);
 	clear[2] = std::cos(total);
 	renderer::get()->set_clear_color(clear);
+
+	renderer::get()->draw_triangle();
 }
 
 void application::get_fps(real dt)

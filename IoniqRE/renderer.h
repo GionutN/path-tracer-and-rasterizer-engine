@@ -27,6 +27,12 @@ public:
 
 	};
 
+	struct Vertex
+	{
+		real x;
+		real y;
+	};
+
 public:
 	static void init(HWND hWnd);
 	static void shutdown();
@@ -34,8 +40,12 @@ public:
 
 	void begin_frame();
 	void end_frame();
-
 	inline void set_clear_color(real* col) { m_clear[0] = col[0]; m_clear[1] = col[1]; m_clear[2] = col[2]; }
+
+	void draw_triangle();
+
+private:
+	void set_triangle();
 
 private:
 	renderer(HWND hWnd);
@@ -46,6 +56,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_imctx;	// immediate context, no calls to d3d from multiple threads yet
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_swchain;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;
+
+	Microsoft::WRL::ComPtr<ID3D11Buffer> vb;
 
 private:
 	real m_clear[4] = {};
