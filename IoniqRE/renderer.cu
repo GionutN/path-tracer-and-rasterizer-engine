@@ -56,6 +56,7 @@ void renderer::draw_triangle()
 
 	// bind the vertex shader
 	m_imctx->VSSetShader(vs.Get(), nullptr, 0);
+	m_imctx->PSSetShader(ps.Get(), nullptr, 0);
 
 	m_imctx->Draw(3, 0);
 }
@@ -84,10 +85,25 @@ void renderer::set_triangle()
 	vbdata.pSysMem = verts;
 	RENDERER_THROW_FAILED(m_device->CreateBuffer(&vbdesc, &vbdata, &vb));
 
+	// set primitive topology
+	m_imctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// set the input layout
+	m_imctx->IASetInputLayout();
+
 	//create vertex shader
 	wrl::ComPtr<ID3DBlob> blob;
 	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"vertex_shader.cso", &blob));
 	RENDERER_THROW_FAILED(m_device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &vs));
+
+	//create pixel shader
+	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"pixel_shader.cso", &blob));
+	RENDERER_THROW_FAILED(m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &ps));
+
+	// set the viewport
+
+	// set the render target
+	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 }
 
 renderer::renderer(HWND hWnd)

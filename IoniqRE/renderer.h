@@ -59,6 +59,7 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vb;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vs;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> ps;
 
 private:
 	real m_clear[4] = {};

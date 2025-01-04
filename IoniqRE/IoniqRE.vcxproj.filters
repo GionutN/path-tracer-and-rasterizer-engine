@@ -70,5 +70,8 @@
     <FxCompile Include="vertex_shader.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
+    <FxCompile Include="pixel_shader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
