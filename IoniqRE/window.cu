@@ -64,14 +64,10 @@ window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
 
 	keyboard::init();
 	mouse::init();
-	timer::init();
-	renderer::init(m_hWnd);
 }
 
 window::~window()
 {
-	renderer::shutdown();
-	timer::shutdown();
 	mouse::shutdown();
 	keyboard::shutdown();
 

@@ -28,6 +28,7 @@ public:
 	~window();
 
 	void set_title(const std::string& title);
+	inline HWND get_handle() const { return m_hWnd; }
 
 private:
 	static LRESULT CALLBACK HandleMessageSetup(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

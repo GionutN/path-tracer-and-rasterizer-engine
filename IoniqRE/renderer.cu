@@ -8,10 +8,10 @@ static renderer* g_renderer;
 
 namespace wrl = Microsoft::WRL;
 
-void renderer::init(HWND hWnd)
+void renderer::init(const ref<window>& wnd)
 {
 	if (!g_renderer) {
-		g_renderer = new renderer(hWnd);
+		g_renderer = new renderer(wnd);
 	}
 }
 
@@ -89,7 +89,7 @@ void renderer::set_triangle()
 	m_imctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// set the input layout
-	m_imctx->IASetInputLayout();
+	//m_imctx->IASetInputLayout();
 
 	//create vertex shader
 	wrl::ComPtr<ID3DBlob> blob;
@@ -101,12 +101,22 @@ void renderer::set_triangle()
 	RENDERER_THROW_FAILED(m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &ps));
 
 	// set the viewport
+	D3D11_VIEWPORT vport = {};
+	vport.TopLeftX = 0.0f;
+	vport.TopLeftY = 0.0f;
+	vport.Width = m_wnd->width;
+	vport.Height = m_wnd->height;
+	vport.MinDepth = 0.0f;
+	vport.MaxDepth = 1.0f;
+	m_imctx->RSSetViewports(1, &vport);
 
 	// set the render target
 	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 }
 
-renderer::renderer(HWND hWnd)
+renderer::renderer(const ref<window>& wnd)
+	:
+	m_wnd(wnd)
 {
 	m_clear[0] = 0.0;
 	m_clear[1] = 0.0;
@@ -127,7 +137,7 @@ renderer::renderer(HWND hWnd)
 	swdesc.SampleDesc.Quality = 0;
 	swdesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swdesc.BufferCount = 2;	// triple-buffering, at least 2 for swap_effect_flip_x
-	swdesc.OutputWindow = hWnd;
+	swdesc.OutputWindow = m_wnd->get_handle();
 	swdesc.Windowed = TRUE;
 	// TODO: add multi-sample antialiasing by first rendering to a multisampled texture
 	swdesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;	// this does NOT support msaa directly on the back buffer

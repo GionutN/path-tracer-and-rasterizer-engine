@@ -6,6 +6,7 @@
 
 #include "core.h"
 #include "ioniq_exception.h"
+#include "window.h"
 
 class renderer
 {
@@ -34,7 +35,7 @@ public:
 	};
 
 public:
-	static void init(HWND hWnd);
+	static void init(const ref<window>& wnd);
 	static void shutdown();
 	static renderer* get();
 
@@ -48,10 +49,11 @@ private:
 	void set_triangle();
 
 private:
-	renderer(HWND hWnd);
+	renderer(const ref<window>& wnd);
 	~renderer() = default;
 
 private:
+	ref<window> m_wnd;
 	Microsoft::WRL::ComPtr<ID3D11Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_imctx;	// immediate context, no calls to d3d from multiple threads yet
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_swchain;

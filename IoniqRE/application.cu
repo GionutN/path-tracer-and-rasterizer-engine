@@ -11,6 +11,14 @@ application::application(const ref<window>& wnd)
 	:
 	m_wnd(wnd)
 {
+	timer::init();
+	renderer::init(m_wnd);
+}
+
+application::~application()
+{
+	renderer::shutdown();
+	timer::shutdown();
 }
 
 bool application::process_message()

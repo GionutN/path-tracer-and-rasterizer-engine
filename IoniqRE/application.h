@@ -9,6 +9,7 @@ public:
 	application(const ref<window>& wnd);
 	application(const application&) = delete;
 	application& operator=(const application&) = delete;
+	~application();
 
 	bool process_message();
 	void update_frame();
