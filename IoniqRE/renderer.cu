@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include <d3dcompiler.h>
+
 static renderer* g_renderer;
 
 namespace wrl = Microsoft::WRL;
@@ -48,9 +50,13 @@ void renderer::end_frame()
 
 void renderer::draw_triangle()
 {
-	// bind the vertex buffer and draw
+	// bind the vertex buffer
 	const UINT stride = sizeof(Vertex), offset = 0;
 	m_imctx->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
+
+	// bind the vertex shader
+	m_imctx->VSSetShader(vs.Get(), nullptr, 0);
+
 	m_imctx->Draw(3, 0);
 }
 
@@ -77,6 +83,11 @@ void renderer::set_triangle()
 	D3D11_SUBRESOURCE_DATA vbdata = {};
 	vbdata.pSysMem = verts;
 	RENDERER_THROW_FAILED(m_device->CreateBuffer(&vbdesc, &vbdata, &vb));
+
+	//create vertex shader
+	wrl::ComPtr<ID3DBlob> blob;
+	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"vertex_shader.cso", &blob));
+	RENDERER_THROW_FAILED(m_device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &vs));
 }
 
 renderer::renderer(HWND hWnd)

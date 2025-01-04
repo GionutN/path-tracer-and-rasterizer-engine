@@ -11,4 +11,4 @@ using scope = std::unique_ptr<T>;
 template<typename T>
 using ref = std::shared_ptr<T>;
 
-typedef double real;
+typedef float real;

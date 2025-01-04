@@ -7,6 +7,9 @@
     <Filter Include="include">
       <UniqueIdentifier>{bc1defd6-9491-43b9-bf16-cc0fd87299b3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{0a075372-a43a-4081-b233-c1f5f4d6a632}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="main.cu">
@@ -62,5 +65,10 @@
     <ClInclude Include="renderer.h">
       <Filter>include</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="vertex_shader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

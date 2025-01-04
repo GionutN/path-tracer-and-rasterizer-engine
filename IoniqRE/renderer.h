@@ -58,6 +58,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vb;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader> vs;
 
 private:
 	real m_clear[4] = {};
@@ -65,5 +66,5 @@ private:
 };
 
 #define RENDERER_THROW_FAILED(fcall) if (FAILED(hr = (fcall))) throw renderer::exception(__LINE__, __FILE__, hr)
-#define RENDERER_EXCEPTION(hr) renderer::exception(__LINE__, __FILE__, (hr))
+#define RENDERER_EXCEPTION(hr) renderer::exception(__LINE__, __FILE__, (hr))	// used for device_removed exception
 #define RENDERER_CUSTOMEXCEPTION(desc) renderer::exception(__LINE__, __FILE__, 0, (desc))
