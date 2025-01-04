@@ -48,7 +48,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;
 
 private:
-	real m_clear[4];
+	real m_clear[4] = {};
 
 };
 

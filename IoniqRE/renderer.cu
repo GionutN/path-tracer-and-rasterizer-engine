@@ -29,10 +29,10 @@ renderer* renderer::get()
 void renderer::begin_frame()
 {
 	float clear[4];
-	clear[0] = m_clear[0];
-	clear[1] = m_clear[1];
-	clear[2] = m_clear[2];
-	clear[3] = m_clear[3];
+	clear[0] = (float)m_clear[0];
+	clear[1] = (float)m_clear[1];
+	clear[2] = (float)m_clear[2];
+	clear[3] = (float)m_clear[3];
 
 	m_imctx->ClearRenderTargetView(m_target.Get(), clear);
 }
@@ -48,6 +48,11 @@ void renderer::end_frame()
 
 renderer::renderer(HWND hWnd)
 {
+	m_clear[0] = 0.0;
+	m_clear[1] = 0.0;
+	m_clear[2] = 0.0;
+	m_clear[3] = 1.0;
+
 	HRESULT hr;
 
 	DXGI_SWAP_CHAIN_DESC swdesc = {};
