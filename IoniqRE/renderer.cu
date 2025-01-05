@@ -56,7 +56,13 @@ void renderer::draw_triangle()
 
 	// bind the vertex shader
 	m_imctx->VSSetShader(vs.Get(), nullptr, 0);
+	// set the input layout
+	m_imctx->IASetInputLayout(layout.Get());
+
+	// bind the pixel shader
 	m_imctx->PSSetShader(ps.Get(), nullptr, 0);
+	// set the render target
+	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 
 	m_imctx->Draw(3, 0);
 }
@@ -66,6 +72,7 @@ void renderer::set_triangle()
 	HRESULT hr;
 
 	// basic vertex structure and data
+	// ALWAYS IN CLOCKWISE ORDER
 	const Vertex verts[3] = {
 		{ 0.0,  0.5},
 		{ 0.5, -0.5},
@@ -88,30 +95,30 @@ void renderer::set_triangle()
 	// set primitive topology
 	m_imctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// set the input layout
-	//m_imctx->IASetInputLayout();
+	//create pixel shader
+	wrl::ComPtr<ID3DBlob> blob;
+	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"pixel_shader.cso", &blob));
+	RENDERER_THROW_FAILED(m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &ps));
 
 	//create vertex shader
-	wrl::ComPtr<ID3DBlob> blob;
 	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"vertex_shader.cso", &blob));
 	RENDERER_THROW_FAILED(m_device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &vs));
 
-	//create pixel shader
-	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"pixel_shader.cso", &blob));
-	RENDERER_THROW_FAILED(m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &ps));
+	// create the input layouts
+	D3D11_INPUT_ELEMENT_DESC indesc[] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA }
+	};
+	RENDERER_THROW_FAILED(m_device->CreateInputLayout(indesc, (UINT)std::size(indesc), blob->GetBufferPointer(), blob->GetBufferSize(), &layout));
 
 	// set the viewport
 	D3D11_VIEWPORT vport = {};
 	vport.TopLeftX = 0.0f;
 	vport.TopLeftY = 0.0f;
-	vport.Width = m_wnd->width;
-	vport.Height = m_wnd->height;
+	vport.Width  = (FLOAT)m_wnd->width;
+	vport.Height = (FLOAT)m_wnd->height;
 	vport.MinDepth = 0.0f;
 	vport.MaxDepth = 1.0f;
 	m_imctx->RSSetViewports(1, &vport);
-
-	// set the render target
-	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 }
 
 renderer::renderer(const ref<window>& wnd)
@@ -182,7 +189,7 @@ const char* renderer::exception::what() const
 {
 	std::ostringstream oss;
 	oss << get_type() << std::endl;
-	oss << "[Error Code]: " << _hr << std::endl;
+	oss << "[Error Code]: " << std::hex << _hr << std::dec << std::endl;
 	oss << "[Description]: " << get_description() << std::endl;
 	oss << get_origin();
 	m_what_buffer = oss.str();

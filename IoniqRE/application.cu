@@ -50,12 +50,6 @@ void application::update_frame()
 
 void application::draw_frame()
 {
-	real clear[4] = { 0.0, 0.0, 0.0, 1.0 };
-	real total = timer::get()->get_total_time();
-	clear[0] = std::sin(total);
-	clear[2] = std::cos(total);
-	renderer::get()->set_clear_color(clear);
-
 	renderer::get()->draw_triangle();
 }
 
