@@ -58,6 +58,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_imctx;	// immediate context, no calls to d3d from multiple threads yet
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_swchain;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> vb;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vs;
@@ -66,6 +68,8 @@ private:
 
 private:
 	real m_clear[4] = {};
+	UINT m_samples, m_quality;
+	DXGI_FORMAT m_output_format;
 
 };
 

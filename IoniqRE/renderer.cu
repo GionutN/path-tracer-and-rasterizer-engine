@@ -42,6 +42,14 @@ void renderer::begin_frame()
 void renderer::end_frame()
 {
 	HRESULT hr;
+	// copy from a multi-sampled texture to a non-sampled texture
+	m_imctx->ResolveSubresource(m_nonmsaa_intermediate_texture.Get(), 0, m_msaa_target_texture.Get(), 0, m_output_format);
+
+	// copy to the back buffer for presenting
+	wrl::ComPtr<ID3D11Texture2D> back_buffer;
+	RENDERER_THROW_FAILED(m_swchain->GetBuffer(0, __uuidof(ID3D11Texture2D), &back_buffer));
+	m_imctx->CopyResource(back_buffer.Get(), m_nonmsaa_intermediate_texture.Get());
+
 	hr = m_swchain->Present(1, 0);	// 1 for vsync;
 	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
 		throw RENDERER_EXCEPTION(m_device->GetDeviceRemovedReason());
@@ -109,21 +117,13 @@ void renderer::set_triangle()
 		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA }
 	};
 	RENDERER_THROW_FAILED(m_device->CreateInputLayout(indesc, (UINT)std::size(indesc), blob->GetBufferPointer(), blob->GetBufferSize(), &layout));
-
-	// set the viewport
-	D3D11_VIEWPORT vport = {};
-	vport.TopLeftX = 0.0f;
-	vport.TopLeftY = 0.0f;
-	vport.Width  = (FLOAT)m_wnd->width;
-	vport.Height = (FLOAT)m_wnd->height;
-	vport.MinDepth = 0.0f;
-	vport.MaxDepth = 1.0f;
-	m_imctx->RSSetViewports(1, &vport);
 }
 
 renderer::renderer(const ref<window>& wnd)
 	:
-	m_wnd(wnd)
+	m_wnd(wnd),
+	m_samples(8),
+	m_output_format(DXGI_FORMAT_B8G8R8A8_UNORM)
 {
 	m_clear[0] = 0.0;
 	m_clear[1] = 0.0;
@@ -133,11 +133,11 @@ renderer::renderer(const ref<window>& wnd)
 	HRESULT hr;
 
 	DXGI_SWAP_CHAIN_DESC swdesc = {};
-	swdesc.BufferDesc.Width = 0;
-	swdesc.BufferDesc.Height = 0;
+	swdesc.BufferDesc.Width = m_wnd->width;
+	swdesc.BufferDesc.Height = m_wnd->height;
 	swdesc.BufferDesc.RefreshRate.Numerator = 60;
 	swdesc.BufferDesc.RefreshRate.Denominator = 1;
-	swdesc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;	// use this instead of rgba for automatic color space conversion (sRGB)
+	swdesc.BufferDesc.Format = m_output_format;	// use BGRA8 instead of RGBA8 for automatic color space conversion (sRGB)
 	swdesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	swdesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 	swdesc.SampleDesc.Count = 1;
@@ -146,7 +146,6 @@ renderer::renderer(const ref<window>& wnd)
 	swdesc.BufferCount = 2;	// triple-buffering, at least 2 for swap_effect_flip_x
 	swdesc.OutputWindow = m_wnd->get_handle();
 	swdesc.Windowed = TRUE;
-	// TODO: add multi-sample antialiasing by first rendering to a multisampled texture
 	swdesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;	// this does NOT support msaa directly on the back buffer
 	swdesc.Flags = 0;
 
@@ -169,9 +168,59 @@ renderer::renderer(const ref<window>& wnd)
 		throw RENDERER_CUSTOMEXCEPTION("Direct3D 11 not supported");
 	}
 
-	wrl:: ComPtr<ID3D11Resource> back_buffer;
-	RENDERER_THROW_FAILED(m_swchain->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer));
-	RENDERER_THROW_FAILED(m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
+	//wrl::ComPtr<ID3D11Resource> back_buffer;
+	//RENDERER_THROW_FAILED(m_swchain->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer));
+	//RENDERER_THROW_FAILED(m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
+
+	RENDERER_THROW_FAILED(m_device->CheckMultisampleQualityLevels(m_output_format, m_samples, &m_quality));
+	m_quality--;
+
+	// create the texture for msaa rendering
+	D3D11_TEXTURE2D_DESC msaa_tex_desc = {};
+	msaa_tex_desc.Width = m_wnd->width;
+	msaa_tex_desc.Height = m_wnd->height;
+	msaa_tex_desc.MipLevels = 1;	// multi-sampled
+	msaa_tex_desc.ArraySize = 1;
+	msaa_tex_desc.Format = m_output_format;
+	msaa_tex_desc.SampleDesc.Count = m_samples;
+	msaa_tex_desc.SampleDesc.Quality = m_quality;
+	msaa_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+	msaa_tex_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	msaa_tex_desc.CPUAccessFlags = 0;
+	msaa_tex_desc.MiscFlags = 0;
+	RENDERER_THROW_FAILED(m_device->CreateTexture2D(&msaa_tex_desc, nullptr, &m_msaa_target_texture));
+
+	// make a non multi-sampled texture
+	D3D11_TEXTURE2D_DESC nonmsaa_tex_desc = {};
+	nonmsaa_tex_desc.Width = m_wnd->width;
+	nonmsaa_tex_desc.Height = m_wnd->height;
+	nonmsaa_tex_desc.MipLevels = 1;
+	nonmsaa_tex_desc.ArraySize = 1;
+	nonmsaa_tex_desc.Format = m_output_format;
+	nonmsaa_tex_desc.SampleDesc.Count = 1;
+	nonmsaa_tex_desc.SampleDesc.Quality = 0;
+	nonmsaa_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+	nonmsaa_tex_desc.BindFlags = 0;
+	nonmsaa_tex_desc.CPUAccessFlags = 0;
+	nonmsaa_tex_desc.MiscFlags = 0;
+	RENDERER_THROW_FAILED(m_device->CreateTexture2D(&nonmsaa_tex_desc, nullptr, &m_nonmsaa_intermediate_texture));
+
+	// set the description for the render target view
+	D3D11_RENDER_TARGET_VIEW_DESC rtv_desc = {};
+	rtv_desc.Format = msaa_tex_desc.Format;
+	rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
+	rtv_desc.Texture2D.MipSlice = 0;
+	RENDERER_THROW_FAILED(m_device->CreateRenderTargetView(m_msaa_target_texture.Get(), &rtv_desc, &m_target));
+
+	// set the viewport
+	D3D11_VIEWPORT vport = {};
+	vport.TopLeftX = 0.0f;
+	vport.TopLeftY = 0.0f;
+	vport.Width = (FLOAT)m_wnd->width;
+	vport.Height = (FLOAT)m_wnd->height;
+	vport.MinDepth = 0.0f;
+	vport.MaxDepth = 1.0f;
+	m_imctx->RSSetViewports(1, &vport);
 
 	set_triangle();
 }
