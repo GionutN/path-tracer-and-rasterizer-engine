@@ -61,7 +61,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
 
-	Microsoft::WRL::ComPtr<ID3D11Buffer> vb;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> vb, ib;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vs;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> ps;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> layout;

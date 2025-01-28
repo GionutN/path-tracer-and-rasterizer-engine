@@ -61,6 +61,7 @@ void renderer::draw_triangle()
 	// bind the vertex buffer
 	const UINT stride = sizeof(Vertex), offset = 0;
 	m_imctx->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
+	m_imctx->IASetIndexBuffer(ib.Get(), DXGI_FORMAT_R32_UINT, offset);
 
 	// bind the vertex shader
 	m_imctx->VSSetShader(vs.Get(), nullptr, 0);
@@ -72,7 +73,8 @@ void renderer::draw_triangle()
 	// set the render target
 	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 
-	m_imctx->Draw(3, 0);
+	//m_imctx->Draw(3, 0);
+	m_imctx->DrawIndexed(6, 0, 0);
 }
 
 void renderer::set_triangle()
@@ -81,10 +83,11 @@ void renderer::set_triangle()
 
 	// basic vertex structure and data
 	// ALWAYS IN CLOCKWISE ORDER
-	const Vertex verts[3] = {
-		{ 0.0,  0.5},
-		{ 0.5, -0.5},
-		{-0.5, -0.5}
+	const Vertex verts[4] = {
+		{ -0.5f,  0.5f },
+		{  0.5f,  0.5f },
+		{  0.5f, -0.5f },
+		{ -0.5f, -0.5f }
 	};
 
 	// create the vertex buffer
@@ -99,6 +102,23 @@ void renderer::set_triangle()
 	D3D11_SUBRESOURCE_DATA vbdata = {};
 	vbdata.pSysMem = verts;
 	RENDERER_THROW_FAILED(m_device->CreateBuffer(&vbdesc, &vbdata, &vb));
+
+	const UINT indices[6] = {
+		0, 1, 3,
+		1, 2, 3
+	};
+	// create the index buffer
+	D3D11_BUFFER_DESC ibdesc = {};
+	ibdesc.ByteWidth = sizeof(indices);
+	ibdesc.Usage = D3D11_USAGE_DEFAULT;
+	ibdesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	ibdesc.CPUAccessFlags = 0;
+	ibdesc.MiscFlags = 0;
+	ibdesc.StructureByteStride = sizeof(UINT);
+
+	D3D11_SUBRESOURCE_DATA ibdata = {};
+	ibdata.pSysMem = indices;
+	RENDERER_THROW_FAILED(m_device->CreateBuffer(&ibdesc, &ibdata, &ib));
 
 	// set primitive topology
 	m_imctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -168,12 +188,9 @@ renderer::renderer(const ref<window>& wnd)
 		throw RENDERER_CUSTOMEXCEPTION("Direct3D 11 not supported");
 	}
 
-	//wrl::ComPtr<ID3D11Resource> back_buffer;
-	//RENDERER_THROW_FAILED(m_swchain->GetBuffer(0, __uuidof(ID3D11Resource), &back_buffer));
-	//RENDERER_THROW_FAILED(m_device->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
-
+	// check for multisampling support
 	RENDERER_THROW_FAILED(m_device->CheckMultisampleQualityLevels(m_output_format, m_samples, &m_quality));
-	m_quality--;
+	m_quality--;	// always use the maximul quality level, quality - 1
 
 	// create the texture for msaa rendering
 	D3D11_TEXTURE2D_DESC msaa_tex_desc = {};
@@ -197,7 +214,7 @@ renderer::renderer(const ref<window>& wnd)
 	nonmsaa_tex_desc.MipLevels = 1;
 	nonmsaa_tex_desc.ArraySize = 1;
 	nonmsaa_tex_desc.Format = m_output_format;
-	nonmsaa_tex_desc.SampleDesc.Count = 1;
+	nonmsaa_tex_desc.SampleDesc.Count = 1;	// non multisampled
 	nonmsaa_tex_desc.SampleDesc.Quality = 0;
 	nonmsaa_tex_desc.Usage = D3D11_USAGE_DEFAULT;
 	nonmsaa_tex_desc.BindFlags = 0;
