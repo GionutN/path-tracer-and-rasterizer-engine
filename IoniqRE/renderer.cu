@@ -1,8 +1,10 @@
 #include "renderer.h"
 
+#include <d3dcompiler.h>
+
 #include <sstream>
 
-#include <d3dcompiler.h>
+#include "mesh.h"
 
 static renderer* g_renderer;
 
@@ -56,13 +58,8 @@ void renderer::end_frame()
 	}
 }
 
-void renderer::draw_triangle()
+void renderer::draw_scene(const mesh& mesh)
 {
-	// bind the vertex buffer
-	const UINT stride = sizeof(Vertex), offset = 0;
-	m_imctx->IASetVertexBuffers(0, 1, vb.GetAddressOf(), &stride, &offset);
-	m_imctx->IASetIndexBuffer(ib.Get(), DXGI_FORMAT_R32_UINT, offset);
-
 	// bind the vertex shader
 	m_imctx->VSSetShader(vs.Get(), nullptr, 0);
 	// set the input layout
@@ -74,7 +71,27 @@ void renderer::draw_triangle()
 	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 
 	//m_imctx->Draw(3, 0);
-	m_imctx->DrawIndexed(6, 0, 0);
+	//m_imctx->DrawIndexed(6, 0, 0);
+
+	this->bind_draw_mesh(mesh);
+}
+
+void renderer::bind_mesh(const mesh& mesh)
+{
+	UINT stride = sizeof(vertex), offset = 0;
+	m_imctx->IASetVertexBuffers(0, 1, mesh.get_vertex_buffer(), &stride, &offset);
+	m_imctx->IASetIndexBuffer(mesh.get_index_buffer(), DXGI_FORMAT_R32_UINT, offset);
+}
+
+void renderer::draw_mesh(const mesh& mesh)
+{
+	m_imctx->DrawIndexed(mesh.get_num_indices(), 0, 0);
+}
+
+void renderer::bind_draw_mesh(const mesh& mesh)
+{
+	this->bind_mesh(mesh);
+	this->draw_mesh(mesh);
 }
 
 void renderer::set_triangle()

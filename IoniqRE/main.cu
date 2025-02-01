@@ -3,6 +3,7 @@
 #include "core.h"
 #include "window.h"
 #include "application.h"
+#include "renderer.h"
 
 int WINAPI WinMain(HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
@@ -17,6 +18,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		while (app.process_message()) {
 			app.run();
 		}
+
 		return EXIT_SUCCESS;
 	}
 	catch (const ioniq_exception & e) {

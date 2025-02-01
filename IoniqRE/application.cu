@@ -12,7 +12,9 @@ application::application(const ref<window>& wnd)
 	m_wnd(wnd)
 {
 	timer::init();
-	renderer::init(m_wnd);
+	renderer::init(wnd);
+
+	meshes.emplace_back(quad());
 }
 
 application::~application()
@@ -50,7 +52,7 @@ void application::update_frame()
 
 void application::draw_frame()
 {
-	renderer::get()->draw_triangle();
+	renderer::get()->draw_scene(meshes.at(0));
 }
 
 void application::get_fps(real dt)

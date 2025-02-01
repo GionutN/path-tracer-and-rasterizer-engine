@@ -1,7 +1,10 @@
 #pragma once
 
+#include <vector>
+
 #include "core.h"
 #include "window.h"
+#include "mesh.h"
 
 class application
 {
@@ -24,5 +27,7 @@ private:
 	ref<window> m_wnd;
 	real title_time = 0.0;
 	int frame = 0;
+
+	std::vector<mesh> meshes;
 
 };

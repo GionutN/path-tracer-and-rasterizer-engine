@@ -36,6 +36,9 @@
     <CudaCompile Include="renderer.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="mesh.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -63,6 +66,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="renderer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="mesh.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
