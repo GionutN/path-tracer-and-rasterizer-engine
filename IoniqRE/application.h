@@ -5,6 +5,7 @@
 #include "core.h"
 #include "window.h"
 #include "mesh.h"
+#include "shader.h"
 
 class application
 {
@@ -29,5 +30,6 @@ private:
 	int frame = 0;
 
 	std::vector<mesh> meshes;
+	std::vector<shader> shaders;
 
 };

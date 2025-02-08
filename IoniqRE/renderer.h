@@ -7,12 +7,16 @@
 #include "core.h"
 #include "ioniq_exception.h"
 #include "window.h"
+#include "shader.h"
+#include "mesh.h"
 
 #define RENDERER_THROW_FAILED(fcall) if (FAILED(hr = (fcall))) throw renderer::exception(__LINE__, __FILE__, hr)
 #define RENDERER_EXCEPTION(hr) renderer::exception(__LINE__, __FILE__, (hr))	// used for device_removed exception
 #define RENDERER_CUSTOMEXCEPTION(desc) renderer::exception(__LINE__, __FILE__, 0, (desc))
 
-class mesh;
+#define RENDERER renderer::get()
+#define RENDERER_DEV renderer::get()->get_device_view()
+#define RENDERER_CTX renderer::get()->get_context_view()
 
 class renderer
 {
@@ -34,12 +38,6 @@ public:
 
 	};
 
-	struct Vertex
-	{
-		real x;
-		real y;
-	};
-
 public:
 	static void init(const ref<window>& wnd);
 	static void shutdown();
@@ -49,33 +47,10 @@ public:
 	void end_frame();
 	inline void set_clear_color(real* col) { m_clear[0] = col[0]; m_clear[1] = col[1]; m_clear[2] = col[2]; }
 
-	void draw_scene(const mesh& mesh);
-	void bind_mesh(const mesh& mesh);
-	void draw_mesh(const mesh& mesh);
-	void bind_draw_mesh(const mesh& mesh);
+	inline ID3D11Device* get_device_view() const { return m_device.Get(); }
+	inline ID3D11DeviceContext* get_context_view() const { return m_imctx.Get(); }
 
-
-	template<typename T>
-	void create_buffer(UINT buffer_type, T* data, UINT len, Microsoft::WRL::ComPtr<ID3D11Buffer>& buff)
-	{
-		HRESULT hr;
-
-		// create the vertex buffer
-		D3D11_BUFFER_DESC bdesc = {};
-		bdesc.ByteWidth = sizeof(T) * len;
-		bdesc.Usage = D3D11_USAGE_DEFAULT;
-		bdesc.BindFlags = buffer_type;
-		bdesc.CPUAccessFlags = 0;
-		bdesc.MiscFlags = 0;
-		bdesc.StructureByteStride = sizeof(T);
-
-		D3D11_SUBRESOURCE_DATA bdata = {};
-		bdata.pSysMem = data;
-		RENDERER_THROW_FAILED(m_device->CreateBuffer(&bdesc, &bdata, &buff));
-	}
-
-private:
-	void set_triangle();
+	void draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders);
 
 private:
 	renderer(const ref<window>& wnd);
@@ -90,7 +65,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
 
-	Microsoft::WRL::ComPtr<ID3D11Buffer> vb, ib;
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> vs;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> ps;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> layout;

@@ -12,18 +12,22 @@ struct vertex
 {
 	real x;
 	real y;
+
+	static constexpr D3D11_INPUT_ELEMENT_DESC vertex_layout = { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA };
+	static D3D11_INPUT_ELEMENT_DESC const* get_vertex_layout() {
+		return &vertex_layout;
+	}
 };
 
 class mesh
 {
 public:
 	mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids);
-	mesh() {}
+	mesh() = default;
 	virtual ~mesh();
 
-	ID3D11Buffer* const* get_vertex_buffer() const { return m_vbuff.GetAddressOf(); }
-	ID3D11Buffer* get_index_buffer()  const { return m_ibuff.Get(); }
-	UINT get_num_indices() const { return (UINT)m_indices.size(); }
+	void bind() const;
+	void draw() const;
 
 protected:
 	void setup_mesh();

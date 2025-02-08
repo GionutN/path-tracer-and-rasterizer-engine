@@ -15,6 +15,7 @@ application::application(const ref<window>& wnd)
 	renderer::init(wnd);
 
 	meshes.emplace_back(quad());
+	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 }
 
 application::~application()
@@ -52,7 +53,7 @@ void application::update_frame()
 
 void application::draw_frame()
 {
-	renderer::get()->draw_scene(meshes.at(0));
+	renderer::get()->draw_scene(meshes, shaders);
 }
 
 void application::get_fps(real dt)

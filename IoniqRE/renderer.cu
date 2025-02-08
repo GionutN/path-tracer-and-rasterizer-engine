@@ -5,6 +5,7 @@
 #include <sstream>
 
 #include "mesh.h"
+#include "shader.h"
 
 static renderer* g_renderer;
 
@@ -58,102 +59,13 @@ void renderer::end_frame()
 	}
 }
 
-void renderer::draw_scene(const mesh& mesh)
+void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders)
 {
-	// bind the vertex shader
-	m_imctx->VSSetShader(vs.Get(), nullptr, 0);
-	// set the input layout
-	m_imctx->IASetInputLayout(layout.Get());
-
-	// bind the pixel shader
-	m_imctx->PSSetShader(ps.Get(), nullptr, 0);
-	// set the render target
 	m_imctx->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
 
-	//m_imctx->Draw(3, 0);
-	//m_imctx->DrawIndexed(6, 0, 0);
-
-	this->bind_draw_mesh(mesh);
-}
-
-void renderer::bind_mesh(const mesh& mesh)
-{
-	UINT stride = sizeof(vertex), offset = 0;
-	m_imctx->IASetVertexBuffers(0, 1, mesh.get_vertex_buffer(), &stride, &offset);
-	m_imctx->IASetIndexBuffer(mesh.get_index_buffer(), DXGI_FORMAT_R32_UINT, offset);
-}
-
-void renderer::draw_mesh(const mesh& mesh)
-{
-	m_imctx->DrawIndexed(mesh.get_num_indices(), 0, 0);
-}
-
-void renderer::bind_draw_mesh(const mesh& mesh)
-{
-	this->bind_mesh(mesh);
-	this->draw_mesh(mesh);
-}
-
-void renderer::set_triangle()
-{
-	HRESULT hr;
-
-	// basic vertex structure and data
-	// ALWAYS IN CLOCKWISE ORDER
-	const Vertex verts[4] = {
-		{ -0.5f,  0.5f },
-		{  0.5f,  0.5f },
-		{  0.5f, -0.5f },
-		{ -0.5f, -0.5f }
-	};
-
-	// create the vertex buffer
-	D3D11_BUFFER_DESC vbdesc = {};
-	vbdesc.ByteWidth = sizeof(verts);
-	vbdesc.Usage = D3D11_USAGE_DEFAULT;
-	vbdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vbdesc.CPUAccessFlags = 0;
-	vbdesc.MiscFlags = 0;
-	vbdesc.StructureByteStride = sizeof(Vertex);
-
-	D3D11_SUBRESOURCE_DATA vbdata = {};
-	vbdata.pSysMem = verts;
-	RENDERER_THROW_FAILED(m_device->CreateBuffer(&vbdesc, &vbdata, &vb));
-
-	const UINT indices[6] = {
-		0, 1, 3,
-		1, 2, 3
-	};
-	// create the index buffer
-	D3D11_BUFFER_DESC ibdesc = {};
-	ibdesc.ByteWidth = sizeof(indices);
-	ibdesc.Usage = D3D11_USAGE_DEFAULT;
-	ibdesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	ibdesc.CPUAccessFlags = 0;
-	ibdesc.MiscFlags = 0;
-	ibdesc.StructureByteStride = sizeof(UINT);
-
-	D3D11_SUBRESOURCE_DATA ibdata = {};
-	ibdata.pSysMem = indices;
-	RENDERER_THROW_FAILED(m_device->CreateBuffer(&ibdesc, &ibdata, &ib));
-
-	// set primitive topology
-	m_imctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	//create pixel shader
-	wrl::ComPtr<ID3DBlob> blob;
-	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"pixel_shader.cso", &blob));
-	RENDERER_THROW_FAILED(m_device->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &ps));
-
-	//create vertex shader
-	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"vertex_shader.cso", &blob));
-	RENDERER_THROW_FAILED(m_device->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &vs));
-
-	// create the input layouts
-	D3D11_INPUT_ELEMENT_DESC indesc[] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA }
-	};
-	RENDERER_THROW_FAILED(m_device->CreateInputLayout(indesc, (UINT)std::size(indesc), blob->GetBufferPointer(), blob->GetBufferSize(), &layout));
+	scene[0].bind();
+	shaders[0].bind();
+	scene[0].draw();
 }
 
 renderer::renderer(const ref<window>& wnd)
@@ -255,8 +167,7 @@ renderer::renderer(const ref<window>& wnd)
 	vport.MinDepth = 0.0f;
 	vport.MaxDepth = 1.0f;
 	m_imctx->RSSetViewports(1, &vport);
-
-	set_triangle();
+	m_imctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 renderer::exception::exception(int line, const std::string& file, HRESULT hr, const std::string& custom_desc)

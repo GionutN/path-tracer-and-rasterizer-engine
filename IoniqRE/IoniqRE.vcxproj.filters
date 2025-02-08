@@ -39,6 +39,9 @@
     <CudaCompile Include="mesh.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="shader.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -71,12 +74,21 @@
     <ClInclude Include="mesh.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="shader.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="vertex_shader.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="pixel_shader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="bg_vert_shader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="bg_pixel_shader.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>
