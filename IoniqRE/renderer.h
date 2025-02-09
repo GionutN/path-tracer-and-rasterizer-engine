@@ -65,13 +65,13 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
 
-	Microsoft::WRL::ComPtr<ID3D11VertexShader> vs;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader> ps;
-	Microsoft::WRL::ComPtr<ID3D11InputLayout> layout;
-
 private:
 	real m_clear[4] = {};
 	UINT m_samples, m_quality;
 	DXGI_FORMAT m_output_format;
+
+	// make these pointers so that they do not get constructed before the renderer gets constructed
+	ref<mesh> m_background;
+	ref<shader> m_bg_shader;
 
 };

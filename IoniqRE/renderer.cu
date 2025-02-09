@@ -15,6 +15,8 @@ void renderer::init(const ref<window>& wnd)
 {
 	if (!g_renderer) {
 		g_renderer = new renderer(wnd);
+		RENDERER->m_background = std::make_shared<quad>();
+		RENDERER->m_bg_shader = std::make_shared<shader>(L"bg_vert_shader.cso", L"bg_pixel_shader.cso");
 	}
 }
 
@@ -40,6 +42,10 @@ void renderer::begin_frame()
 	clear[3] = (float)m_clear[3];
 
 	m_imctx->ClearRenderTargetView(m_target.Get(), clear);
+
+	m_background->bind();
+	m_bg_shader->bind();
+	m_background->draw();
 }
 
 void renderer::end_frame()
