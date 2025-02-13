@@ -2,6 +2,8 @@
 
 #include "renderer.h"
 
+namespace dx = DirectX;
+
 mesh::mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids)
 	:
 	m_vertices(verts),
@@ -60,9 +62,9 @@ void mesh::setup_mesh()
 triangle::triangle()
 {
 	m_vertices = {
-		{ 0.0f,  0.5f },
-		{ 0.5f, -0.5f },
-		{-0.5f, -0.5f }
+		{dx::XMFLOAT2( 0.0f,  0.5f)},
+		{dx::XMFLOAT2( 0.5f, -0.5f)},
+		{dx::XMFLOAT2(-0.5f, -0.5f)}
 	};
 
 	m_indices = {
@@ -75,10 +77,10 @@ triangle::triangle()
 quad::quad()
 {
 	m_vertices = {
-		{-0.5f,  0.5f },
-		{ 0.5f,  0.5f },
-		{ 0.5f, -0.5f },
-		{-0.5f, -0.5f },
+		{dx::XMFLOAT2(-0.5f,  0.5f)},
+		{dx::XMFLOAT2( 0.5f,  0.5f)},
+		{dx::XMFLOAT2( 0.5f, -0.5f)},
+		{dx::XMFLOAT2(-0.5f, -0.5f)},
 	};
 
 	m_indices = {
@@ -87,4 +89,13 @@ quad::quad()
 	};
 
 	this->setup_mesh();
+}
+
+reg_polygon::reg_polygon(UINT vertices)
+{
+	float theta = dx::XMVectorGetX(dx::g_XMTwoPi) / vertices;
+	m_vertices.emplace_back(dx::XMFLOAT2(0.0f, 0.0f));
+	
+	dx::XMVECTOR vertex = dx::XMVectorSet(0.5, 0.0f, 0.0f, 0.0f);
+	dx::XMMATRIX rotation = dx::XMMatrixRotationZ(theta);
 }
