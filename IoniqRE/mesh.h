@@ -54,8 +54,8 @@ public:
 	quad();
 };
 
-class reg_polygon : public mesh
-{
-public:
-	reg_polygon(UINT vertices);
-};
+//class reg_polygon : public mesh
+//{
+//public:
+//	reg_polygon(UINT vertices);
+//};

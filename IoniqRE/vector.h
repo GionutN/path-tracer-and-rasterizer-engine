@@ -5,25 +5,25 @@
 
 #include "matrix.h"
 
-struct float2
+struct vec2
 {
 	float x;
 	float y;
 
-	float2(float x, float y) : x(x), y(y) {}
-	float2(float val) { x = y = val; }
-	float2() { x = y = 0.0f; }
+	vec2(float x, float y) : x(x), y(y) {}
+	vec2(float val) { x = y = val; }
+	vec2() { x = y = 0.0f; }
 };
 
-struct float3
+struct vec3
 {
 	float x;
 	float y;
 	float z;
 
-	float3(float x, float y, float z) : x(x), y(y), z(z) {}
-	float3(float val) { x = y = z = val; }
-	float3() { x = y = z = 0.0f; }
+	vec3(float x, float y, float z) : x(x), y(y), z(z) {}
+	vec3(float val) { x = y = z = val; }
+	vec3() { x = y = z = 0.0f; }
 };
 
 class iqvec
@@ -41,17 +41,17 @@ public:
 public:
 	iqvec(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 	iqvec(float val = 0.0f) { x = y = z = w = val; }
-	static inline iqvec load(const float2& other) {
+	static inline iqvec load(const vec2& other) {
 		return iqvec(other.x, other.y, 0.0f, 0.0f);
 	}
-	static inline iqvec load(const float3& other) {
+	static inline iqvec load(const vec3& other) {
 		return iqvec(other.x, other.y, other.z, 0.0f);
 	}
-	inline float2 store2() const {
-		return float2(x, y);
+	inline vec2 store2() const {
+		return vec2(x, y);
 	}
-	inline float3 store3() const {
-		return float3(x, y, z);
+	inline vec3 store3() const {
+		return vec3(x, y, z);
 	}
 
 	inline float& operator[](int i) {

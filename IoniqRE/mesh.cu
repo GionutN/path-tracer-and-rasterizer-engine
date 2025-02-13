@@ -91,11 +91,11 @@ quad::quad()
 	this->setup_mesh();
 }
 
-reg_polygon::reg_polygon(UINT vertices)
-{
-	float theta = dx::XMVectorGetX(dx::g_XMTwoPi) / vertices;
-	m_vertices.emplace_back(dx::XMFLOAT2(0.0f, 0.0f));
-	
-	dx::XMVECTOR vertex = dx::XMVectorSet(0.5, 0.0f, 0.0f, 0.0f);
-	dx::XMMATRIX rotation = dx::XMMatrixRotationZ(theta);
-}
+//reg_polygon::reg_polygon(UINT vertices)
+//{
+//	float theta = dx::XMVectorGetX(dx::g_XMTwoPi) / vertices;
+//	m_vertices.emplace_back(dx::XMFLOAT2(0.0f, 0.0f));
+//	
+//	dx::XMVECTOR vertex = dx::XMVectorSet(0.5, 0.0f, 0.0f, 0.0f);
+//	dx::XMMATRIX rotation = dx::XMMatrixRotationZ(theta);
+//}
