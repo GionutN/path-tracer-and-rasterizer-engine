@@ -31,5 +31,5 @@ private:
 
 	std::vector<mesh> meshes;
 	std::vector<shader> shaders;
-
+	UINT verts = 3;
 };

@@ -2,8 +2,6 @@
 
 #include "renderer.h"
 
-namespace dx = DirectX;
-
 mesh::mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids)
 	:
 	m_vertices(verts),
@@ -27,7 +25,7 @@ void mesh::bind() const
 
 void mesh::draw() const
 {
-	RENDERER_CTX->DrawIndexed(m_indices.size(), 0, 0);
+	RENDERER_CTX->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
 
 void mesh::setup_mesh()
@@ -36,7 +34,7 @@ void mesh::setup_mesh()
 
 	// create the vertex buffer
 	D3D11_BUFFER_DESC bdesc = {};
-	bdesc.ByteWidth = sizeof(vertex) * m_vertices.size();
+	bdesc.ByteWidth = (UINT)(sizeof(vertex) * m_vertices.size());
 	bdesc.Usage = D3D11_USAGE_DEFAULT;
 	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bdesc.CPUAccessFlags = 0;
@@ -48,7 +46,7 @@ void mesh::setup_mesh()
 	RENDERER_THROW_FAILED(RENDERER_DEV->CreateBuffer(&bdesc, &bdata, &m_vbuff));
 
 	// create the index buffer
-	bdesc.ByteWidth = sizeof(UINT) * m_indices.size();
+	bdesc.ByteWidth = (UINT)(sizeof(UINT) * m_indices.size());
 	bdesc.Usage = D3D11_USAGE_DEFAULT;
 	bdesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	bdesc.CPUAccessFlags = 0;
@@ -62,9 +60,9 @@ void mesh::setup_mesh()
 triangle::triangle()
 {
 	m_vertices = {
-		{dx::XMFLOAT2( 0.0f,  0.5f)},
-		{dx::XMFLOAT2( 0.5f, -0.5f)},
-		{dx::XMFLOAT2(-0.5f, -0.5f)}
+		{vec2( 0.0f,  0.5f)},
+		{vec2( 0.5f, -0.5f)},
+		{vec2(-0.5f, -0.5f)}
 	};
 
 	m_indices = {
@@ -77,10 +75,10 @@ triangle::triangle()
 quad::quad()
 {
 	m_vertices = {
-		{dx::XMFLOAT2(-0.5f,  0.5f)},
-		{dx::XMFLOAT2( 0.5f,  0.5f)},
-		{dx::XMFLOAT2( 0.5f, -0.5f)},
-		{dx::XMFLOAT2(-0.5f, -0.5f)},
+		{vec2(-0.5f,  0.5f)},
+		{vec2( 0.5f,  0.5f)},
+		{vec2( 0.5f, -0.5f)},
+		{vec2(-0.5f, -0.5f)},
 	};
 
 	m_indices = {
@@ -91,11 +89,30 @@ quad::quad()
 	this->setup_mesh();
 }
 
-//reg_polygon::reg_polygon(UINT vertices)
-//{
-//	float theta = dx::XMVectorGetX(dx::g_XMTwoPi) / vertices;
-//	m_vertices.emplace_back(dx::XMFLOAT2(0.0f, 0.0f));
-//	
-//	dx::XMVECTOR vertex = dx::XMVectorSet(0.5, 0.0f, 0.0f, 0.0f);
-//	dx::XMMATRIX rotation = dx::XMMatrixRotationZ(theta);
-//}
+reg_polygon::reg_polygon(UINT vertices)
+{
+	vertices = vertices > 2 ? vertices : 3;
+	float theta = tau / vertices;
+	m_vertices.emplace_back(vec2());
+	
+	iqvec vertex(0.5, 0.0f, 0.0f, 0.0f);
+	m_vertices.emplace_back(vertex.store2());
+	iqmat transform = iqmat::rotation_z(theta);
+
+	for (UINT i = 1; i < vertices; i++) {
+		vertex.transform(transform, iqvec::usage::POINT);
+		m_vertices.emplace_back(vertex.store2());
+	}
+
+	for (UINT i = 1; i < vertices; i++) {
+		m_indices.emplace_back(i);
+		m_indices.emplace_back(0);
+		m_indices.emplace_back(i + 1);
+	}
+	// add the last triangle
+	m_indices.emplace_back((UINT)m_vertices.size() - 1);
+	m_indices.emplace_back(0);
+	m_indices.emplace_back(1);
+
+	this->setup_mesh();
+}

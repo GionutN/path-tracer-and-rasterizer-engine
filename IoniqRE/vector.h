@@ -11,8 +11,7 @@ struct vec2
 	float y;
 
 	vec2(float x, float y) : x(x), y(y) {}
-	vec2(float val) { x = y = val; }
-	vec2() { x = y = 0.0f; }
+	vec2(float val = 0.0f) { x = y = val; }
 };
 
 struct vec3
@@ -22,8 +21,7 @@ struct vec3
 	float z;
 
 	vec3(float x, float y, float z) : x(x), y(y), z(z) {}
-	vec3(float val) { x = y = z = val; }
-	vec3() { x = y = z = 0.0f; }
+	vec3(float val = 0.0f) { x = y = z = val; }
 };
 
 class iqvec

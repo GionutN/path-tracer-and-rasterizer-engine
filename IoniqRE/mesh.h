@@ -3,15 +3,17 @@
 #include "ioniq_windows.h"
 #include <d3d11.h>
 #include <wrl.h>
-#include <DirectXMath.h>
 
 #include <vector>
 
 #include "core.h"
+#include "iqmath.h"
 
 struct vertex
 {
-	DirectX::XMFLOAT2 pos;
+	vec2 pos;
+	vertex(const vec2& pos) : pos(pos) {}
+	vertex() = default;
 
 	static constexpr D3D11_INPUT_ELEMENT_DESC vertex_layout = { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA };
 	static D3D11_INPUT_ELEMENT_DESC const* get_vertex_layout() {
@@ -54,8 +56,8 @@ public:
 	quad();
 };
 
-//class reg_polygon : public mesh
-//{
-//public:
-//	reg_polygon(UINT vertices);
-//};
+class reg_polygon : public mesh
+{
+public:
+	reg_polygon(UINT vertices);
+};

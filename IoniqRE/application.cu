@@ -14,7 +14,7 @@ application::application(const ref<window>& wnd)
 	timer::init();
 	renderer::init(wnd);
 
-	meshes.emplace_back(quad());
+	meshes.emplace_back(reg_polygon(3));
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 }
 
@@ -49,6 +49,19 @@ void application::update_frame()
 {
 	real dt = timer::get()->get_delta();
 	get_fps(dt);
+
+	switch (mouse::get()->get_event().get_type()) {
+	case mouse::event::type::WHEELUP:
+		verts++;
+		meshes[0] = reg_polygon(verts);
+		break;
+	case mouse::event::type::WHEELDOWN:
+		verts--;
+		meshes[0] = reg_polygon(verts);
+		break;
+	}
+	if (verts < 3) verts = 3;
+	if (verts > 100) verts = 100;
 }
 
 void application::draw_frame()
