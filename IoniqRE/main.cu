@@ -63,14 +63,14 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	CHECKCUDA(cudaGetLastError());
 	CHECKCUDA(cudaDeviceSynchronize());
 
-	fout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+	/*fout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
 
 	for (int i = 0; i < image_height; i++) {
 		for (int j = 0; j < image_width; j++) {
 			int pixelid = i * image_width + j;
 			fout << (int)fb[pixelid].r << ' ' << (int)fb[pixelid].g << ' ' << (int)fb[pixelid].b << '\n';
 		}
-	}
+	}*/
 	fout.close();
 
 	try {

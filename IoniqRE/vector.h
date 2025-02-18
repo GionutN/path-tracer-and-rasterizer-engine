@@ -29,7 +29,7 @@ class iqvec
 public:
 	enum class usage
 	{
-		INVALID,
+		INVALID = -1,
 		POINT,
 		DIRECTION,
 		MISCELLANEOUS,

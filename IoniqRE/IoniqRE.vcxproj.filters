@@ -103,5 +103,11 @@
     <FxCompile Include="bg_pixel_shader.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
+    <FxCompile Include="PTVertexShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PTPixelShader.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

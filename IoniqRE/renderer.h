@@ -21,6 +21,23 @@
 class renderer
 {
 public:
+	enum class engine
+	{
+		INVALID = -1,
+		RASTERIZER,
+		PATHTRACER,
+		NUMENGINES
+	};
+
+	struct pixel
+	{
+		uint8_t b;
+		uint8_t g;
+		uint8_t r;
+		uint8_t a;
+	};
+
+public:
 	class exception : public ioniq_exception
 	{
 	public:
@@ -52,20 +69,37 @@ public:
 
 	void draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders);
 
+	inline void change_engine(engine new_engine) { m_crt_engine = new_engine; }
+	inline engine get_engine() const { return m_old_engine; }
+
 private:
 	renderer(const ref<window>& wnd);
-	~renderer() = default;
+	~renderer();
 
 private:
 	ref<window> m_wnd;
 	Microsoft::WRL::ComPtr<ID3D11Device> m_device;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_imctx;	// immediate context, no calls to d3d from multiple threads yet
 	Microsoft::WRL::ComPtr<IDXGISwapChain> m_swchain;
-	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_rttarget;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
 
+	// path-tracer resources
+	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pttarget;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_pttexture;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pttexture_view;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState> m_pttexture_sampler;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_ptpixel_shader;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader> m_ptvertex_shader;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_ptlayout;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_ptvertex_buffer;
+	D3D11_MAPPED_SUBRESOURCE m_mapped_texture;
+	pixel* m_pixel_buffer;
+
+
 private:
+	engine m_crt_engine, m_old_engine;
 	real m_clear[4] = {};
 	UINT m_samples, m_quality;
 	DXGI_FORMAT m_output_format;
