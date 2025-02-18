@@ -18,18 +18,14 @@ mesh::~mesh()
 
 void mesh::bind() const
 {
-	if (RENDERER->get_engine() == renderer::engine::RASTERIZER) {
-		UINT stride = sizeof(vertex), offset = 0;
-		RENDERER_CTX->IASetVertexBuffers(0, 1, m_vbuff.GetAddressOf(), &stride, &offset);
-		RENDERER_CTX->IASetIndexBuffer(m_ibuff.Get(), DXGI_FORMAT_R32_UINT, offset);
-	}
+	UINT stride = sizeof(vertex), offset = 0;
+	RENDERER_CTX->IASetVertexBuffers(0, 1, m_vbuff.GetAddressOf(), &stride, &offset);
+	RENDERER_CTX->IASetIndexBuffer(m_ibuff.Get(), DXGI_FORMAT_R32_UINT, offset);
 }
 
 void mesh::draw() const
 {
-	if (RENDERER->get_engine() == renderer::engine::RASTERIZER) {
-		RENDERER_CTX->DrawIndexed((UINT)m_indices.size(), 0, 0);
-	}
+	RENDERER_CTX->DrawIndexed((UINT)m_indices.size(), 0, 0);
 }
 
 void mesh::setup_mesh()

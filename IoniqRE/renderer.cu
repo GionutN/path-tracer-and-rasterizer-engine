@@ -1,11 +1,22 @@
 #include "renderer.h"
 
-#include <d3dcompiler.h>
-
 #include <sstream>
+#include <d3dcompiler.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
 
 #include "mesh.h"
 #include "shader.h"
+
+#define CHECKCUDA(val) check_cuda((val), #val, __FILE__, __LINE__)
+
+void check_cuda(cudaError_t err, const char* func, const char* file, int line)
+{
+	if (err) {
+		cudaDeviceReset();
+		exit(99);
+	}
+}
 
 static renderer* g_renderer;
 
@@ -106,26 +117,42 @@ void renderer::end_frame()
 	}
 }
 
+__global__ void render(renderer::pixel* fb, int width, int height)
+{
+	int y = threadIdx.y + blockIdx.y * blockDim.y;
+	int x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (y >= height || x >= width) {
+		return;
+	}
+	int pixelid = y * width + x;
+	fb[pixelid].r = (uint8_t)(256.0f * y / height);
+	fb[pixelid].g = (uint8_t)(256.0f * x / width);
+	fb[pixelid].b = 50;
+	fb[pixelid].a = 255;
+}
+
 void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders)
 {
-	m_background->bind();
-	m_bg_shader->bind();
-	m_background->draw();
+	switch (m_old_engine) {
+	case engine::RASTERIZER:
+		m_background->bind();
+		m_bg_shader->bind();
+		m_background->draw();
 
-	scene[0].bind();
-	shaders[0].bind();
-	scene[0].draw();
+		scene[0].bind();
+		shaders[0].bind();
+		scene[0].draw();
+		break;
+	case engine::PATHTRACER:
+		unsigned int tx = 16, ty = 16;
+		unsigned int num_pixels = m_wnd->height * m_wnd->width;
 
-	if (m_old_engine == engine::PATHTRACER) {
-		for (UINT16 y = 0; y < m_wnd->height; y++) {
-			for (UINT16 x = 0; x < m_wnd->width; x++) {
-				int pixelid = y * m_wnd->width + x;
-				m_pixel_buffer[pixelid].r = (uint8_t)(256.0f * y / m_wnd->height);
-				m_pixel_buffer[pixelid].g = (uint8_t)(256.0f * x / m_wnd->width);
-				m_pixel_buffer[pixelid].b = 50;
-				m_pixel_buffer[pixelid].a = 255;
-			}
-		}
+		dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
+		dim3 threads(tx, ty);
+		// Render
+		render<<<blocks, threads>>>(m_pixel_buffer, m_wnd->width, m_wnd->height);
+		CHECKCUDA(cudaGetLastError());
+		CHECKCUDA(cudaDeviceSynchronize());
 	}
 }
 
@@ -268,7 +295,7 @@ renderer::renderer(const ref<window>& wnd)
 		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA}
 	};
-	RENDERER_THROW_FAILED(m_device->CreateInputLayout(pt_vertex_layout, std::size(pt_vertex_layout), blob->GetBufferPointer(), blob->GetBufferSize(), &m_ptlayout));
+	RENDERER_THROW_FAILED(m_device->CreateInputLayout(pt_vertex_layout, (UINT)std::size(pt_vertex_layout), blob->GetBufferPointer(), blob->GetBufferSize(), &m_ptlayout));
 
 	const float vertices[] = {
 		-1.0f,  1.0f, 0.0f, 0.0f,
@@ -301,13 +328,14 @@ renderer::renderer(const ref<window>& wnd)
 	smpl_desc.MaxLOD = D3D11_FLOAT32_MAX;
 	RENDERER_THROW_FAILED(m_device->CreateSamplerState(&smpl_desc, &m_pttexture_sampler));
 
-	m_pixel_buffer = new pixel[(size_t)m_wnd->width * m_wnd->height];
+	size_t fbsize = (size_t)m_wnd->width * m_wnd->height * sizeof(pixel);
+	CHECKCUDA(cudaMallocManaged((void**)&m_pixel_buffer, fbsize));
 }
 
 renderer::~renderer()
 {
 	if (m_pixel_buffer) {
-		delete[] m_pixel_buffer;
+		CHECKCUDA(cudaFree(m_pixel_buffer));
 		m_pixel_buffer = nullptr;
 	}
 }

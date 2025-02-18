@@ -73,12 +73,12 @@ void application::get_fps(real dt)
 {
 	frame++;
 	title_time += dt;
-	if (title_time > 1.0) {
+	if (title_time > 1.0f) {
 		std::ostringstream oss;
 		oss << "FPS: " << frame << ' ';
-		oss << '(' << 1000.0 / frame << "ms)";
+		oss << '(' << 1000.0f / frame << "ms)";
 		m_wnd->set_title(oss.str());
-		title_time = 0.0;
+		title_time = 0.0f;
 		frame = 0;
 	}
 }
