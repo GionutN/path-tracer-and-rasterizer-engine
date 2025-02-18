@@ -27,6 +27,7 @@ private:
 	// use shared ptr instead of unique because it can not be instantiated from the ptr in main
 	ref<window> m_wnd;
 	real title_time = 0.0f;
+	float dt;
 	int frame = 0;
 
 	std::vector<mesh> meshes;

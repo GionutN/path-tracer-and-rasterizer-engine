@@ -66,7 +66,7 @@ void renderer::begin_frame()
 	clear[3] = (float)m_clear[3];
 
 	m_imctx->ClearRenderTargetView(m_rttarget.Get(), clear);
-	memset(m_pixel_buffer, 0, sizeof(pixel) * m_wnd->width * m_wnd->height);
+	cudaMemset(m_dev_pixel_buffer, 0, sizeof(pixel) * m_wnd->width * m_wnd->height);
 }
 
 void renderer::end_frame()
@@ -94,7 +94,7 @@ void renderer::end_frame()
 		// perform the copy line-by-line
 		for (size_t i = 0; i < m_wnd->height; i++)
 		{
-			memcpy(&dest[i * dest_pitch], &m_pixel_buffer[i * src_pitch], row_bytes);
+			memcpy(&dest[i * dest_pitch], &m_host_pixel_buffer[i * src_pitch], row_bytes);
 		}
 		// release the adapter memory
 		m_imctx->Unmap(m_pttexture.Get(), 0);
@@ -131,8 +131,11 @@ __global__ void render(renderer::pixel* fb, int width, int height)
 	fb[pixelid].a = 255;
 }
 
-void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders)
+void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders, float dt)
 {
+	static float time = 0.0f;
+	time += dt;
+
 	switch (m_old_engine) {
 	case engine::RASTERIZER:
 		m_background->bind();
@@ -150,9 +153,16 @@ void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shad
 		dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
 		dim3 threads(tx, ty);
 		// Render
-		render<<<blocks, threads>>>(m_pixel_buffer, m_wnd->width, m_wnd->height);
+		render<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
 		CHECKCUDA(cudaGetLastError());
-		CHECKCUDA(cudaDeviceSynchronize());
+
+		if (time > 0.5f) {
+			time = 0.0f;
+			CHECKCUDA(cudaDeviceSynchronize());
+			size_t num_pixels = m_wnd->width * m_wnd->height;
+			size_t fbsize = num_pixels * sizeof(pixel);
+			CHECKCUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
+		}
 	}
 }
 
@@ -328,15 +338,21 @@ renderer::renderer(const ref<window>& wnd)
 	smpl_desc.MaxLOD = D3D11_FLOAT32_MAX;
 	RENDERER_THROW_FAILED(m_device->CreateSamplerState(&smpl_desc, &m_pttexture_sampler));
 
-	size_t fbsize = (size_t)m_wnd->width * m_wnd->height * sizeof(pixel);
-	CHECKCUDA(cudaMallocManaged((void**)&m_pixel_buffer, fbsize));
+	size_t num_pixels = m_wnd->width * m_wnd->height;
+	size_t fbsize = num_pixels * sizeof(pixel);
+	CHECKCUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
+	m_host_pixel_buffer = new pixel[num_pixels];
 }
 
 renderer::~renderer()
 {
-	if (m_pixel_buffer) {
-		CHECKCUDA(cudaFree(m_pixel_buffer));
-		m_pixel_buffer = nullptr;
+	if (m_dev_pixel_buffer) {
+		CHECKCUDA(cudaFree(m_dev_pixel_buffer));
+		m_dev_pixel_buffer = nullptr;
+	}
+	if (m_host_pixel_buffer) {
+		delete[] m_host_pixel_buffer;
+		m_host_pixel_buffer = nullptr;
 	}
 }
 

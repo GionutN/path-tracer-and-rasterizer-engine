@@ -47,7 +47,7 @@ void application::run()
 
 void application::update_frame()
 {
-	real dt = timer::get()->get_delta();
+	dt = timer::get()->get_delta();
 	get_fps(dt);
 
 	switch (mouse::get()->get_event().get_type()) {
@@ -66,7 +66,7 @@ void application::update_frame()
 
 void application::draw_frame()
 {
-	renderer::get()->draw_scene(meshes, shaders);
+	renderer::get()->draw_scene(meshes, shaders, dt);
 }
 
 void application::get_fps(real dt)

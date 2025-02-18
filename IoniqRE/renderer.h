@@ -67,7 +67,7 @@ public:
 	inline ID3D11Device* get_device_view() const { return m_device.Get(); }
 	inline ID3D11DeviceContext* get_context_view() const { return m_imctx.Get(); }
 
-	void draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders);
+	void draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders, float dt);
 
 	inline void change_engine(engine new_engine) { m_crt_engine = new_engine; }
 	inline engine get_engine() const { return m_old_engine; }
@@ -95,7 +95,8 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_ptlayout;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_ptvertex_buffer;
 	D3D11_MAPPED_SUBRESOURCE m_mapped_texture;
-	pixel* m_pixel_buffer;
+	pixel* m_dev_pixel_buffer;
+	pixel* m_host_pixel_buffer;
 
 
 private:
