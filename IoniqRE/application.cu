@@ -50,6 +50,18 @@ void application::update_frame()
 	dt = timer::get()->get_delta();
 	get_fps(dt);
 
+	keyboard::event e = keyboard::get()->get_event();
+	switch (e.get_type()) {
+	case keyboard::event::type::PRESS:
+		if (e.get_key() == 'R') {
+			RENDERER->change_engine(renderer::engine::RASTERIZER);
+		}
+		if (e.get_key() == 'P') {
+			RENDERER->change_engine(renderer::engine::PATHTRACER);
+		}
+		break;
+	}
+
 	switch (mouse::get()->get_event().get_type()) {
 	case mouse::event::type::WHEELUP:
 		verts++;

@@ -147,22 +147,21 @@ void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shad
 		scene[0].draw();
 		break;
 	case engine::PATHTRACER:
-		unsigned int tx = 16, ty = 16;
-		unsigned int num_pixels = m_wnd->height * m_wnd->width;
-
-		dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
-		dim3 threads(tx, ty);
-		// Render
-		render<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
-		CHECKCUDA(cudaGetLastError());
-
 		if (time > 0.5f) {
 			time = 0.0f;
+			UINT tx = 16, ty = 16;
+			UINT num_pixels = m_wnd->height * m_wnd->width;
+
+			dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
+			dim3 threads(tx, ty);
+			// Render
+			render<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
+			CHECKCUDA(cudaGetLastError());
 			CHECKCUDA(cudaDeviceSynchronize());
-			size_t num_pixels = m_wnd->width * m_wnd->height;
 			size_t fbsize = num_pixels * sizeof(pixel);
 			CHECKCUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
 		}
+		break;
 	}
 }
 
@@ -342,6 +341,7 @@ renderer::renderer(const ref<window>& wnd)
 	size_t fbsize = num_pixels * sizeof(pixel);
 	CHECKCUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
 	m_host_pixel_buffer = new pixel[num_pixels];
+	memset(m_host_pixel_buffer, 0, fbsize);
 }
 
 renderer::~renderer()
