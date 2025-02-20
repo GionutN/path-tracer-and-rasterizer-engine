@@ -8,16 +8,6 @@
 #include "mesh.h"
 #include "shader.h"
 
-#define CHECKCUDA(val) check_cuda((val), #val, __FILE__, __LINE__)
-
-void check_cuda(cudaError_t err, const char* func, const char* file, int line)
-{
-	if (err) {
-		cudaDeviceReset();
-		exit(99);
-	}
-}
-
 static renderer* g_renderer;
 
 namespace wrl = Microsoft::WRL;
@@ -50,23 +40,20 @@ void renderer::begin_frame()
 		m_old_engine = m_crt_engine;
 	}
 
-	switch (m_old_engine) {
-	case engine::RASTERIZER:
-		m_imctx->OMSetRenderTargets(1, m_rttarget.GetAddressOf(), nullptr);
-		break;
-	case engine::PATHTRACER:
-		m_imctx->OMSetRenderTargets(1, m_pttarget.GetAddressOf(), nullptr);
-		break;
-	}
-
 	float clear[4];
 	clear[0] = (float)m_clear[0];
 	clear[1] = (float)m_clear[1];
 	clear[2] = (float)m_clear[2];
 	clear[3] = (float)m_clear[3];
-
-	m_imctx->ClearRenderTargetView(m_rttarget.Get(), clear);
-	cudaMemset(m_dev_pixel_buffer, 0, sizeof(pixel) * m_wnd->width * m_wnd->height);
+	switch (m_old_engine) {
+	case engine::RASTERIZER:
+		m_imctx->OMSetRenderTargets(1, m_rttarget.GetAddressOf(), nullptr);
+		m_imctx->ClearRenderTargetView(m_rttarget.Get(), clear);
+		break;
+	case engine::PATHTRACER:
+		m_imctx->OMSetRenderTargets(1, m_pttarget.GetAddressOf(), nullptr);
+		break;
+	}
 }
 
 void renderer::end_frame()
@@ -84,20 +71,25 @@ void renderer::end_frame()
 		m_imctx->CopyResource(back_buffer.Get(), m_nonmsaa_intermediate_texture.Get());
 		break;
 	case engine::PATHTRACER:
-		RENDERER_THROW_FAILED(m_imctx->Map(m_pttexture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m_mapped_texture));
+		// update the texture only when the pathtracer updates the pixel buffer
+		if (m_ptimage_updated) {
+			RENDERER_THROW_FAILED(m_imctx->Map(m_pttexture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m_mapped_texture));
 
-		// setup parameteres for copying
-		pixel* dest = (pixel*)(m_mapped_texture.pData);
-		const size_t dest_pitch = m_mapped_texture.RowPitch / sizeof(pixel);
-		const size_t src_pitch = m_wnd->width;
-		const size_t row_bytes = src_pitch * sizeof(pixel);
-		// perform the copy line-by-line
-		for (size_t i = 0; i < m_wnd->height; i++)
-		{
-			memcpy(&dest[i * dest_pitch], &m_host_pixel_buffer[i * src_pitch], row_bytes);
+			// setup parameteres for copying
+			pixel* dest = (pixel*)(m_mapped_texture.pData);
+			const size_t dest_pitch = m_mapped_texture.RowPitch / sizeof(pixel);
+			const size_t src_pitch = m_wnd->width;
+			const size_t row_bytes = src_pitch * sizeof(pixel);
+			// perform the copy line-by-line
+			for (size_t i = 0; i < m_wnd->height; i++)
+			{
+				memcpy(&dest[i * dest_pitch], &m_host_pixel_buffer[i * src_pitch], row_bytes);
+			}
+			// release the adapter memory
+			m_imctx->Unmap(m_pttexture.Get(), 0);
+
+			m_ptimage_updated = false;
 		}
-		// release the adapter memory
-		m_imctx->Unmap(m_pttexture.Get(), 0);
 
 		// render offscreen scene texture to back buffer
 		const UINT stride = 16, offset = 0;
@@ -133,6 +125,7 @@ __global__ void render(renderer::pixel* fb, int width, int height)
 
 void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders, float dt)
 {
+	cudaError cderr;
 	static float time = 0.0f;
 	time += dt;
 
@@ -147,6 +140,7 @@ void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shad
 		scene[0].draw();
 		break;
 	case engine::PATHTRACER:
+		// let the compute kernel run for half a second, then retrieve the computed image
 		if (time > 0.5f) {
 			time = 0.0f;
 			UINT tx = 16, ty = 16;
@@ -154,12 +148,12 @@ void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shad
 
 			dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
 			dim3 threads(tx, ty);
-			// Render
-			render<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
-			CHECKCUDA(cudaGetLastError());
-			CHECKCUDA(cudaDeviceSynchronize());
+			RENDERER_THROW_CUDA(cudaGetLastError());
 			size_t fbsize = num_pixels * sizeof(pixel);
-			CHECKCUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
+			RENDERER_THROW_CUDA(cudaDeviceSynchronize());	// synchronize before calling the kernel, so that it runs for half a second
+			RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
+			m_ptimage_updated = true;
+			render<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
 		}
 		break;
 	}
@@ -171,14 +165,16 @@ renderer::renderer(const ref<window>& wnd)
 	m_samples(8),
 	m_output_format(DXGI_FORMAT_B8G8R8A8_UNORM),
 	m_crt_engine(engine::PATHTRACER),
-	m_old_engine(engine::PATHTRACER)
+	m_old_engine(engine::PATHTRACER),
+	m_ptimage_updated(true)
 {
-	m_clear[0] = 0.0;
-	m_clear[1] = 0.0;
-	m_clear[2] = 0.0;
-	m_clear[3] = 1.0;
+	m_clear[0] = 0.0f;
+	m_clear[1] = 0.0f;
+	m_clear[2] = 0.0f;
+	m_clear[3] = 1.0f;
 
 	HRESULT hr;
+	cudaError cderr;
 
 	DXGI_SWAP_CHAIN_DESC swdesc = {};
 	swdesc.BufferDesc.Width = m_wnd->width;
@@ -339,24 +335,29 @@ renderer::renderer(const ref<window>& wnd)
 
 	size_t num_pixels = m_wnd->width * m_wnd->height;
 	size_t fbsize = num_pixels * sizeof(pixel);
-	CHECKCUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
 	m_host_pixel_buffer = new pixel[num_pixels];
 	memset(m_host_pixel_buffer, 0, fbsize);
+	cudaMemset(m_dev_pixel_buffer, 0, fbsize);
 }
 
 renderer::~renderer()
 {
+	cudaError cderr;
+
+	RENDERER_THROW_CUDA(cudaDeviceSynchronize());
 	if (m_dev_pixel_buffer) {
-		CHECKCUDA(cudaFree(m_dev_pixel_buffer));
+		RENDERER_THROW_CUDA(cudaFree(m_dev_pixel_buffer));
 		m_dev_pixel_buffer = nullptr;
 	}
 	if (m_host_pixel_buffer) {
 		delete[] m_host_pixel_buffer;
 		m_host_pixel_buffer = nullptr;
 	}
+	cudaDeviceReset();
 }
 
-renderer::exception::exception(int line, const std::string& file, HRESULT hr, const std::string& custom_desc)
+renderer::hr_exception::hr_exception(int line, const std::string& file, HRESULT hr, const std::string& custom_desc)
 	:
 	ioniq_exception(line, file),
 	_hr(hr),
@@ -365,7 +366,7 @@ renderer::exception::exception(int line, const std::string& file, HRESULT hr, co
 
 }
 
-const char* renderer::exception::what() const
+const char* renderer::hr_exception::what() const
 {
 	std::ostringstream oss;
 	oss << get_type() << std::endl;
@@ -376,7 +377,7 @@ const char* renderer::exception::what() const
 	return m_what_buffer.c_str();
 }
 
-std::string renderer::exception::get_description() const
+std::string renderer::hr_exception::get_description() const
 {
 	if (_hr == 0) {
 		return _custom_desc;
@@ -392,4 +393,24 @@ std::string renderer::exception::get_description() const
 	std::string out = msg;
 	LocalFree(msg);
 	return out;
+}
+
+renderer::cuda_exception::cuda_exception(int line, const std::string& file, cudaError err)
+	:
+	ioniq_exception(line, file),
+	_err(err)
+{
+	
+}
+
+const char* renderer::cuda_exception::what() const
+{
+	std::ostringstream oss;
+	oss << get_type() << std::endl;
+	oss << "[Error Code]: " << _err << std::endl;
+	oss << "[Name]: " << cudaGetErrorName(_err) << std::endl;
+	oss << "[Description]: " << cudaGetErrorString(_err) << std::endl;
+	oss << get_origin();
+	m_what_buffer = oss.str();
+	return m_what_buffer.c_str();
 }
