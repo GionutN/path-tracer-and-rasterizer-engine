@@ -2,7 +2,7 @@
 
 #include "vector.h"
 
-iqmat::iqmat(float _00, float _01, float _02, float _03,
+__host__ __device__ iqmat::iqmat(float _00, float _01, float _02, float _03,
 	float _10, float _11, float _12, float _13,
 	float _20, float _21, float _22, float _23,
 	float _30, float _31, float _32, float _33) {
@@ -11,14 +11,14 @@ iqmat::iqmat(float _00, float _01, float _02, float _03,
 	m[2][0] = _20; m[2][1] = _21; m[2][2] = _22; m[2][3] = _23;
 	m[3][0] = _30; m[3][1] = _31; m[3][2] = _32; m[3][3] = _33;
 }
-iqmat::iqmat(float* data) {
+__host__ __device__ iqmat::iqmat(float* data) {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
 			m[i][j] = data[i * 4 + j];
 		}
 	}
 }
-iqmat::iqmat(float val) {
+__host__ __device__ iqmat::iqmat(float val) {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
 			m[i][j] = 0.0f;
@@ -27,14 +27,14 @@ iqmat::iqmat(float val) {
 
 	m[0][0] = m[1][1] = m[2][2] = m[3][3] = val;
 }
-iqvec iqmat::row_to_vec(int row) const {
+__host__ __device__ iqvec iqmat::row_to_vec(int row) const {
 	return iqvec(m[row][0], m[row][1], m[row][2], m[row][3]);
 }
-iqvec iqmat::col_to_vec(int col) const {
+__host__ __device__ iqvec iqmat::col_to_vec(int col) const {
 	return iqvec(m[0][col], m[1][col], m[2][col], m[3][col]);
 }
 
-iqmat iqmat::operator*(const iqmat& other) const {
+__host__ __device__ iqmat iqmat::operator*(const iqmat& other) const {
 	return iqmat(this->row_to_vec(0).dot4(this->col_to_vec(0)),
 		this->row_to_vec(0).dot4(this->col_to_vec(1)),
 		this->row_to_vec(0).dot4(this->col_to_vec(2)),
@@ -55,11 +55,11 @@ iqmat iqmat::operator*(const iqmat& other) const {
 		this->row_to_vec(3).dot4(this->col_to_vec(2)),
 		this->row_to_vec(3).dot4(this->col_to_vec(3)));
 }
-iqmat& iqmat::operator*=(const iqmat& other) {
+__host__ __device__ iqmat& iqmat::operator*=(const iqmat& other) {
 	*this = (*this) * other;
 	return *this;
 }
-iqmat iqmat::operator*(float s) const {
+__host__ __device__ iqmat iqmat::operator*(float s) const {
 	iqmat result;
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -69,21 +69,21 @@ iqmat iqmat::operator*(float s) const {
 
 	return result;
 }
-iqmat iqmat::operator/(float s) const {
+__host__ __device__ iqmat iqmat::operator/(float s) const {
 	s = 1 / s;
 	return (*this) * s;
 }
-iqmat& iqmat::operator*=(float s) {
+__host__ __device__ iqmat& iqmat::operator*=(float s) {
 	*this = (*this) * s;
 	return *this;
 }
-iqmat& iqmat::operator/=(float s) {
+__host__ __device__ iqmat& iqmat::operator/=(float s) {
 	s = 1 / s;
 	*this = (*this) * s;
 	return *this;
 }
 
-iqmat iqmat::transposed() const {
+__host__ __device__ iqmat iqmat::transposed() const {
 	iqmat result;
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
@@ -93,11 +93,11 @@ iqmat iqmat::transposed() const {
 
 	return result;
 }
-iqmat& iqmat::transpose() {
+__host__ __device__ iqmat& iqmat::transpose() {
 	*this = this->transposed();
 	return *this;
 }
-float iqmat::determinant() const {
+__host__ __device__ float iqmat::determinant() const {
 	return
 		m[0][3] * m[1][2] * m[2][1] * m[3][0] - m[0][2] * m[1][3] * m[2][1] * m[3][0] -
 		m[0][3] * m[1][1] * m[2][2] * m[3][0] + m[0][1] * m[1][3] * m[2][2] * m[3][0] +
@@ -113,9 +113,9 @@ float iqmat::determinant() const {
 		m[0][1] * m[1][0] * m[2][2] * m[3][3] + m[0][0] * m[1][1] * m[2][2] * m[3][3];
 }
 
-iqmat iqmat::inveresed() const {
+__host__ __device__ iqmat iqmat::inveresed() const {
 	float det = this->determinant();
-	if (std::fabsf(det) < 0.00001f) {
+	if (fabsf(det) < 0.00001f) {
 		return iqmat(INFINITY);
 	}
 
@@ -245,18 +245,18 @@ iqmat iqmat::inveresed() const {
 	return iqmat(inv);
 }
 
-iqmat& iqmat::inverse() {
+__host__ __device__ iqmat& iqmat::inverse() {
 	*this = this->inveresed();
 	return *this;
 }
 
-bool iqmat::is_identity() const {
+__host__ __device__ bool iqmat::is_identity() const {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
-			if (std::fabsf(m[i][j]) > 0.00001f) {
+			if (fabsf(m[i][j]) > 0.00001f) {
 				return false;
 			}
-			if (i == j && std::fabsf(m[i][i] - 1.0f) > 0.00001f) {
+			if (i == j && fabsf(m[i][i] - 1.0f) > 0.00001f) {
 				return false;
 			}
 		}
@@ -264,10 +264,10 @@ bool iqmat::is_identity() const {
 
 	return true;
 }
-bool iqmat::is_infinite() const {
+__host__ __device__ bool iqmat::is_infinite() const {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
-			if (std::isinf(m[i][j])) {
+			if (isinf(m[i][j])) {
 				return true;
 			}
 		}
@@ -275,10 +275,10 @@ bool iqmat::is_infinite() const {
 
 	return false;
 }
-bool iqmat::is_nan() const {
+__host__ __device__ bool iqmat::is_nan() const {
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
-			if (std::isnan(m[i][j])) {
+			if (isnan(m[i][j])) {
 				return true;
 			}
 		}
@@ -287,7 +287,7 @@ bool iqmat::is_nan() const {
 	return false;
 }
 
-iqmat iqmat::look_at(const iqvec& eye, const iqvec& focus) {
+__host__ __device__ iqmat iqmat::look_at(const iqvec& eye, const iqvec& focus) {
 	const iqvec aux = iqvec(0.0f, 1.0f, 0.0f, 0.0f);
 	iqvec forward = (eye - focus).normalize3();
 	iqvec right = aux.cross3(forward);
@@ -297,8 +297,8 @@ iqmat iqmat::look_at(const iqvec& eye, const iqvec& focus) {
 		forward.x, forward.y, forward.z, 0.0f,
 		eye.x, eye.y, eye.z, 1.0f);
 }
-iqmat iqmat::orthographic(float width, float height, float near, float far) {
-	if (near < 0.0f || far < 0.0f || std::fabsf(near - far) < 0.00001f) {
+__host__ __device__ iqmat iqmat::orthographic(float width, float height, float near, float far) {
+	if (near < 0.0f || far < 0.0f || fabsf(near - far) < 0.00001f) {
 		return iqmat(INFINITY);
 	}
 
@@ -310,12 +310,12 @@ iqmat iqmat::orthographic(float width, float height, float near, float far) {
 	result.m[3][2] = (near + far) / (near - far);
 	return result;
 }
-iqmat iqmat::perspective(float aspect_ratio, float fovh, float near, float far) {
-	if (near < 0.0f || far < 0.0f || std::fabsf(near - far) < 0.00001f) {
+__host__ __device__ iqmat iqmat::perspective(float aspect_ratio, float fovh, float near, float far) {
+	if (near < 0.0f || far < 0.0f || fabsf(near - far) < 0.00001f) {
 		return iqmat(INFINITY);
 	}
 
-	const float top = std::tanf(fovh / 2) * near;
+	const float top = tanf(fovh / 2) * near;
 	const float bottom = -top;
 	const float right = top * aspect_ratio;
 	const float left = -right;
@@ -331,24 +331,24 @@ iqmat iqmat::perspective(float aspect_ratio, float fovh, float near, float far) 
 	return result;
 }
 
-iqmat iqmat::scale(const iqvec& factor) {
+__host__ __device__ iqmat iqmat::scale(const iqvec& factor) {
 	iqmat result;
 	result.m[0][0] = factor.x;
 	result.m[1][1] = factor.y;
 	result.m[2][2] = factor.z;
 	return result;
 }
-iqmat iqmat::translate(const iqvec& offset) {
+__host__ __device__ iqmat iqmat::translate(const iqvec& offset) {
 	iqmat result;
 	result.m[3][0] = offset.x;
 	result.m[3][1] = offset.y;
 	result.m[3][2] = offset.z;
 	return result;
 }
-iqmat iqmat::rotation_x(float angle) {
+__host__ __device__ iqmat iqmat::rotation_x(float angle) {
 	iqmat result;
-	const float s = std::sinf(angle);
-	const float c = std::cosf(angle);
+	const float s = sinf(angle);
+	const float c = cosf(angle);
 
 	result.m[1][1] = c;
 	result.m[1][2] = s;
@@ -356,10 +356,10 @@ iqmat iqmat::rotation_x(float angle) {
 	result.m[2][2] = c;
 	return result;
 }
-iqmat iqmat::rotation_y(float angle) {
+__host__ __device__ iqmat iqmat::rotation_y(float angle) {
 	iqmat result;
-	const float s = std::sinf(angle);
-	const float c = std::cosf(angle);
+	const float s = sinf(angle);
+	const float c = cosf(angle);
 
 	result.m[0][0] = c;
 	result.m[0][2] = -s;
@@ -367,10 +367,10 @@ iqmat iqmat::rotation_y(float angle) {
 	result.m[2][2] = c;
 	return result;
 }
-iqmat iqmat::rotation_z(float angle) {
+__host__ __device__ iqmat iqmat::rotation_z(float angle) {
 	iqmat result;
-	const float s = std::sinf(angle);
-	const float c = std::cosf(angle);
+	const float s = sinf(angle);
+	const float c = cosf(angle);
 
 	result.m[0][0] = c;
 	result.m[0][1] = s;
@@ -378,10 +378,10 @@ iqmat iqmat::rotation_z(float angle) {
 	result.m[1][1] = c;
 	return result;
 }
-iqmat iqmat::rotation(float angle, const iqvec& axis) {
+__host__ __device__ iqmat iqmat::rotation(float angle, const iqvec& axis) {
 	iqmat result;
-	const float s = std::sinf(angle);
-	const float c = std::cosf(angle);
+	const float s = sinf(angle);
+	const float c = cosf(angle);
 
 	result.m[0][0] = c + axis.x * axis.x * (1.0f - c);
 	result.m[0][1] = axis.y * axis.x * (1.0f - c) + axis.z * s;

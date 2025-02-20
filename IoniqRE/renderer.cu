@@ -7,6 +7,7 @@
 
 #include "mesh.h"
 #include "shader.h"
+#include "iqmath.h"
 
 static renderer* g_renderer;
 
@@ -116,10 +117,12 @@ __global__ void render(renderer::pixel* fb, int width, int height)
 	if (y >= height || x >= width) {
 		return;
 	}
+	iqvec color = iqvec((float)y / height, (float)x / width, 0.2f, 0.0f);
+
 	int pixelid = y * width + x;
-	fb[pixelid].r = (uint8_t)(256.0f * y / height);
-	fb[pixelid].g = (uint8_t)(256.0f * x / width);
-	fb[pixelid].b = 50;
+	fb[pixelid].r = (uint8_t)(256.0f * color.x);
+	fb[pixelid].g = (uint8_t)(256.0f * color.y);
+	fb[pixelid].b = (uint8_t)(256.0f * color.z);
 	fb[pixelid].a = 255;
 }
 
