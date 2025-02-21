@@ -341,7 +341,7 @@ renderer::renderer(const ref<window>& wnd)
 	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
 	m_host_pixel_buffer = new pixel[num_pixels];
 	memset(m_host_pixel_buffer, 0, fbsize);
-	cudaMemset(m_dev_pixel_buffer, 0, fbsize);
+	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, fbsize));
 }
 
 renderer::~renderer()

@@ -112,7 +112,11 @@ LRESULT window::HandleMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		PostQuitMessage(0);
 		break;
 	case WM_KILLFOCUS:
-		keyboard::get()->clear_states();
+		// for some reason, killfocus is called after the window has been destroyed
+		// so if an error occurs, keyboard will be null
+		if (keyboard::get() != nullptr) {
+			keyboard::get()->clear_states();
+		}
 		break;
 
 	// keyboard messages
