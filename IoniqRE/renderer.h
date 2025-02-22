@@ -89,7 +89,7 @@ public:
 	inline void change_engine(engine new_engine) { m_crt_engine = new_engine; }
 	inline engine get_engine() const { return m_old_engine; }
 
-	//__device__ static iqvec ray_color(const ray& r);
+	__device__ static iqvec ray_color(const ray& r);
 private:
 	renderer(const ref<window>& wnd);
 	~renderer();

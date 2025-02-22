@@ -331,7 +331,7 @@ void renderer::rt_draw_scene(const std::vector<mesh>& scene, const std::vector<s
 	scene[0].draw();
 }
 
-__device__ iqvec ray_color(const ray& r)
+__device__ iqvec renderer::ray_color(const ray& r)
 {
 	iqvec dir = r.get_direction().normalize3();
 	float t = (dir.y + 1.0f) * 0.5f;
@@ -358,7 +358,7 @@ __global__ static void render_kernel(renderer::pixel* fb, int width, int height)
 	iqvec crt_pixel = pixel00 + x * du + y * dv;
 	ray r = ray(center, crt_pixel - center);
 
-	iqvec color = ray_color(r);
+	iqvec color = renderer::ray_color(r);
 	color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
 	color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
 	color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
