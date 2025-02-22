@@ -110,54 +110,14 @@ void renderer::end_frame()
 	}
 }
 
-__global__ void render(renderer::pixel* fb, int width, int height)
-{
-	int y = threadIdx.y + blockIdx.y * blockDim.y;
-	int x = threadIdx.x + blockIdx.x * blockDim.x;
-	if (y >= height || x >= width) {
-		return;
-	}
-	iqvec color = iqvec((float)y / height, (float)x / width, 0.2f, 0.0f);
-
-	int pixelid = y * width + x;
-	fb[pixelid].r = (uint8_t)(256.0f * color.x);
-	fb[pixelid].g = (uint8_t)(256.0f * color.y);
-	fb[pixelid].b = (uint8_t)(256.0f * color.z);
-	fb[pixelid].a = 255;
-}
-
 void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders, float dt)
 {
-	cudaError cderr;
-	static float time = 0.0f;
-	time += dt;
-
 	switch (m_old_engine) {
 	case engine::RASTERIZER:
-		m_background->bind();
-		m_bg_shader->bind();
-		m_background->draw();
-
-		scene[0].bind();
-		shaders[0].bind();
-		scene[0].draw();
+		this->rt_draw_scene(scene, shaders);
 		break;
 	case engine::PATHTRACER:
-		// let the compute kernel run for half a second, then retrieve the computed image
-		if (time > 0.5f) {
-			time = 0.0f;
-			UINT tx = 16, ty = 16;
-			UINT num_pixels = m_wnd->height * m_wnd->width;
-
-			dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
-			dim3 threads(tx, ty);
-			RENDERER_THROW_CUDA(cudaGetLastError());
-			size_t fbsize = num_pixels * sizeof(pixel);
-			RENDERER_THROW_CUDA(cudaDeviceSynchronize());	// synchronize before calling the kernel, so that it runs for half a second
-			RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
-			m_ptimage_updated = true;
-			render<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
-		}
+		this->pt_draw_scene(dt);
 		break;
 	}
 }
@@ -358,6 +318,81 @@ renderer::~renderer()
 		m_host_pixel_buffer = nullptr;
 	}
 	cudaDeviceReset();
+}
+
+void renderer::rt_draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders)
+{
+	m_background->bind();
+	m_bg_shader->bind();
+	m_background->draw();
+
+	scene[0].bind();
+	shaders[0].bind();
+	scene[0].draw();
+}
+
+__device__ iqvec ray_color(const ray& r)
+{
+	iqvec dir = r.get_direction().normalize3();
+	float t = (dir.y + 1.0f) * 0.5f;
+	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+}
+
+__global__ static void render_kernel(renderer::pixel* fb, int width, int height)
+{
+	int y = threadIdx.y + blockIdx.y * blockDim.y;
+	int x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (y >= height || x >= width) {
+		return;
+	}
+	// compute the viewing direction of each pixel
+	float aspect_ratio = (float)width / height;
+	iqvec center = iqvec();
+	iqvec viewport = iqvec(0.0f, 0.0f, -1.0f, 0.0f);
+	iqvec viewport_u = iqvec(aspect_ratio, 0.0f, 0.0f, 0.0f);
+	iqvec viewport_v = iqvec(0.0f, -1.0f, 0.0f, 0.0f);
+	iqvec du = viewport_u / width;
+	iqvec dv = viewport_v / height;
+	iqvec topleft = viewport - center - (viewport_u + viewport_v) / 2.0f;
+	iqvec pixel00 = topleft + 0.5f * (du + dv);
+	iqvec crt_pixel = pixel00 + x * du + y * dv;
+	ray r = ray(center, crt_pixel - center);
+
+	iqvec color = ray_color(r);
+	color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
+	color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
+	color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
+
+	int pixelid = y * width + x;
+	fb[pixelid].r = (uint8_t)(255.0f * color.x);
+	fb[pixelid].g = (uint8_t)(255.0f * color.y);
+	fb[pixelid].b = (uint8_t)(255.0f * color.z);
+	fb[pixelid].a = 255;
+}
+
+void renderer::pt_draw_scene(float dt)
+{
+	cudaError cderr;
+
+	static float time = 0.0f;
+	time += dt;
+
+	// let the compute kernel run for half a second, then retrieve the computed image
+	if (time > 0.5f) {
+		time = 0.0f;
+
+		UINT tx = 16, ty = 16;
+		UINT num_pixels = m_wnd->height * m_wnd->width;
+
+		dim3 blocks(m_wnd->width / tx + 1, m_wnd->height / ty + 1);
+		dim3 threads(tx, ty);
+		RENDERER_THROW_CUDA(cudaGetLastError());
+		size_t fbsize = num_pixels * sizeof(pixel);
+		RENDERER_THROW_CUDA(cudaDeviceSynchronize());	// synchronize before calling the kernel, so that it runs for half a second
+		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
+		m_ptimage_updated = true;
+		render_kernel<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
+	}
 }
 
 renderer::hr_exception::hr_exception(int line, const std::string& file, HRESULT hr, const std::string& custom_desc)

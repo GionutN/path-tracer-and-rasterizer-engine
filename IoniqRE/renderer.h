@@ -11,6 +11,7 @@
 #include "window.h"
 #include "shader.h"
 #include "mesh.h"
+#include "ray.h"
 
 #define RENDERER_THROW_FAILED(fcall) if (FAILED(hr = (fcall))) throw renderer::hr_exception(__LINE__, __FILE__, hr)
 #define RENDERER_EXCEPTION(hr) renderer::hr_exception(__LINE__, __FILE__, (hr))	// used for device_removed exception
@@ -88,9 +89,13 @@ public:
 	inline void change_engine(engine new_engine) { m_crt_engine = new_engine; }
 	inline engine get_engine() const { return m_old_engine; }
 
+	//__device__ static iqvec ray_color(const ray& r);
 private:
 	renderer(const ref<window>& wnd);
 	~renderer();
+
+	void rt_draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders);
+	void pt_draw_scene(float dt);
 
 private:
 	ref<window> m_wnd;
