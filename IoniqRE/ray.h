@@ -8,8 +8,8 @@ public:
 	__device__ ray(const iqvec& o, const iqvec& d);
 	__device__ ray();
 
-	__device__ inline iqvec get_origin() const { return m_origin; }
-	__device__ inline iqvec get_direction() const { return m_direction; }
+	__device__ inline iqvec origin() const { return m_origin; }
+	__device__ inline iqvec direction() const { return m_direction; }
 	__device__ inline iqvec at(float t) const { return m_origin + t * m_direction; }
 
 private:

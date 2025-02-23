@@ -8,6 +8,7 @@
 #include "mesh.h"
 #include "shader.h"
 #include "iqmath.h"
+#include "shape.h"
 
 static renderer* g_renderer;
 
@@ -306,11 +307,9 @@ renderer::renderer(const ref<window>& wnd)
 
 renderer::~renderer()
 {
-	cudaError cderr;
-
-	RENDERER_THROW_CUDA(cudaDeviceSynchronize());
+	cudaDeviceSynchronize();
 	if (m_dev_pixel_buffer) {
-		RENDERER_THROW_CUDA(cudaFree(m_dev_pixel_buffer));
+		cudaFree(m_dev_pixel_buffer);
 		m_dev_pixel_buffer = nullptr;
 	}
 	if (m_host_pixel_buffer) {
@@ -333,27 +332,32 @@ void renderer::rt_draw_scene(const std::vector<mesh>& scene, const std::vector<s
 
 __device__ iqvec renderer::ray_color(const ray& r)
 {
-	iqvec dir = r.get_direction().normalize3();
-	float t = (dir.y + 1.0f) * 0.5f;
+	sphere s;
+	if (s.intersect(r)) {
+		return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	iqvec dir = r.direction().normalize3();
+	const float t = (dir.y + 1.0f) * 0.5f;
 	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 }
 
 __global__ static void render_kernel(renderer::pixel* fb, int width, int height)
 {
-	int y = threadIdx.y + blockIdx.y * blockDim.y;
-	int x = threadIdx.x + blockIdx.x * blockDim.x;
+	const int y = threadIdx.y + blockIdx.y * blockDim.y;
+	const int x = threadIdx.x + blockIdx.x * blockDim.x;
 	if (y >= height || x >= width) {
 		return;
 	}
 	// compute the viewing direction of each pixel
-	float aspect_ratio = (float)width / height;
-	iqvec center = iqvec();
-	iqvec viewport = iqvec(0.0f, 0.0f, -1.0f, 0.0f);
+	const float aspect_ratio = (float)width / height;
+	iqvec center = iqvec(0.0f, 0.0f, 2.0f, 1.0f);
+	iqvec viewport = iqvec(0.0f, 0.0f, 1.0f, 0.0f);
 	iqvec viewport_u = iqvec(aspect_ratio, 0.0f, 0.0f, 0.0f);
 	iqvec viewport_v = iqvec(0.0f, -1.0f, 0.0f, 0.0f);
 	iqvec du = viewport_u / width;
 	iqvec dv = viewport_v / height;
-	iqvec topleft = viewport - center - (viewport_u + viewport_v) / 2.0f;
+	iqvec topleft = center - viewport - (viewport_u + viewport_v) / 2.0f;
 	iqvec pixel00 = topleft + 0.5f * (du + dv);
 	iqvec crt_pixel = pixel00 + x * du + y * dv;
 	ray r = ray(center, crt_pixel - center);
@@ -363,7 +367,7 @@ __global__ static void render_kernel(renderer::pixel* fb, int width, int height)
 	color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
 	color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
 
-	int pixelid = y * width + x;
+	const int pixelid = y * width + x;
 	fb[pixelid].r = (uint8_t)(255.0f * color.x);
 	fb[pixelid].g = (uint8_t)(255.0f * color.y);
 	fb[pixelid].b = (uint8_t)(255.0f * color.z);

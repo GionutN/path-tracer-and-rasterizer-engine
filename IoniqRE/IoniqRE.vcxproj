@@ -96,6 +96,7 @@
     <CudaCompile Include="ray.cu" />
     <CudaCompile Include="renderer.cu" />
     <CudaCompile Include="shader.cu" />
+    <CudaCompile Include="shape.cu" />
     <CudaCompile Include="timer.cu" />
     <CudaCompile Include="window.cu" />
   </ItemGroup>
@@ -112,6 +113,7 @@
     <ClInclude Include="ray.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="shader.h" />
+    <ClInclude Include="shape.h" />
     <ClInclude Include="timer.h" />
     <ClInclude Include="vector.h" />
     <ClInclude Include="window.h" />

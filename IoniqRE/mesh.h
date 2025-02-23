@@ -43,10 +43,10 @@ protected:
 
 };
 
-class triangle : public mesh
+class tri : public mesh
 {
 public:
-	triangle();
+	tri();
 
 };
 

@@ -57,7 +57,7 @@ void mesh::setup_mesh()
 	RENDERER_THROW_FAILED(RENDERER_DEV->CreateBuffer(&bdesc, &bdata, &m_ibuff));
 }
 
-triangle::triangle()
+tri::tri()
 {
 	m_vertices = {
 		{vec2( 0.0f,  0.5f)},
