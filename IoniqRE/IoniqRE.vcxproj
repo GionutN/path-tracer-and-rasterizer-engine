@@ -60,6 +60,7 @@
       <Defines>
       </Defines>
       <CodeGeneration>compute_75,sm_75;%(CodeGeneration)</CodeGeneration>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -81,6 +82,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <CodeGeneration>compute_75,sm_75;%(CodeGeneration)</CodeGeneration>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -91,6 +93,7 @@
     <CudaCompile Include="matrix.cu" />
     <CudaCompile Include="mesh.cu" />
     <CudaCompile Include="mouse.cu" />
+    <CudaCompile Include="ray.cu" />
     <CudaCompile Include="renderer.cu" />
     <CudaCompile Include="shader.cu" />
     <CudaCompile Include="timer.cu" />
