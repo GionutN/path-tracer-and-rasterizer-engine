@@ -21,3 +21,8 @@ __host__ __device__ static float to_radians(float angle)
 {
 	return angle * pi / 180.0f;
 }
+
+__host__ __device__ static bool is_zero(float val)
+{
+	return fabsf(val) < 0.000001f;
+}

@@ -332,8 +332,11 @@ void renderer::rt_draw_scene(const std::vector<mesh>& scene, const std::vector<s
 
 __device__ iqvec renderer::ray_color(const ray& r)
 {
-	sphere s;
-	if (s.intersect(r)) {
+	triangle tr(iqvec(-0.5f, -0.5f, 0.0f, 1.0f),
+		iqvec( 0.5f, -0.5f, 0.0f, 1.0f),
+		iqvec( 0.0f,  0.5f, 0.0f, 1.0f)
+	);
+	if (tr.intersect(r)) {
 		return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
 	}
 
