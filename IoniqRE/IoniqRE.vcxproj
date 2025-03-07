@@ -95,6 +95,7 @@
     <CudaCompile Include="mouse.cu" />
     <CudaCompile Include="ray.cu" />
     <CudaCompile Include="renderer.cu" />
+    <CudaCompile Include="scene.cu" />
     <CudaCompile Include="shader.cu" />
     <CudaCompile Include="shape.cu" />
     <CudaCompile Include="timer.cu" />
@@ -112,6 +113,7 @@
     <ClInclude Include="mouse.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="renderer.h" />
+    <ClInclude Include="scene.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="shape.h" />
     <ClInclude Include="timer.h" />

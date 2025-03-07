@@ -11,11 +11,11 @@
 
 struct vertex
 {
-	vec2 pos;
-	vertex(const vec2& pos) : pos(pos) {}
+	vec3 pos;
+	vertex(const vec3& pos) : pos(pos) {}
 	vertex() = default;
 
-	static constexpr D3D11_INPUT_ELEMENT_DESC vertex_layout = { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA };
+	static constexpr D3D11_INPUT_ELEMENT_DESC vertex_layout = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA };
 	static D3D11_INPUT_ELEMENT_DESC const* get_vertex_layout() {
 		return &vertex_layout;
 	}
@@ -24,9 +24,23 @@ struct vertex
 class mesh
 {
 public:
-	mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids);
-	mesh() = default;
+	// used for different ray intersection algorithms
+	enum class type
+	{
+		INVALID = -1,
+		TRIANGLES,
+		SPHERES,
+		NUMTYPES
+	};
+
+public:
+	mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids, type t = type::TRIANGLES);
+	mesh(type t = type::TRIANGLES);
 	virtual ~mesh();
+
+	inline type get_type() const { return m_mesh_type; }
+	inline const std::vector<vertex>& get_vertices() const { return m_vertices; }
+	inline const std::vector<UINT>& get_indices()    const { return m_indices; }
 
 	void bind() const;
 	void draw() const;
@@ -40,6 +54,7 @@ protected:
 
 	std::vector<vertex> m_vertices;
 	std::vector<UINT>   m_indices;
+	type m_mesh_type;
 
 };
 

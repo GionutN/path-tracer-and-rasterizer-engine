@@ -6,6 +6,7 @@
 #include "window.h"
 #include "mesh.h"
 #include "shader.h"
+#include "scene.h"
 
 class application
 {
@@ -30,7 +31,7 @@ private:
 	float dt = 0.0f;
 	int frame = 0;
 
-	std::vector<mesh> meshes;
+	scene meshes;
 	std::vector<shader> shaders;
 	UINT verts = 3;
 };

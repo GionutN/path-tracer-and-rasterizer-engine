@@ -51,6 +51,9 @@
     <CudaCompile Include="shape.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="scene.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -99,6 +102,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="shape.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="scene.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

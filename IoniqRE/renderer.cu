@@ -8,7 +8,6 @@
 #include "mesh.h"
 #include "shader.h"
 #include "iqmath.h"
-#include "shape.h"
 
 static renderer* g_renderer;
 
@@ -111,14 +110,14 @@ void renderer::end_frame()
 	}
 }
 
-void renderer::draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders, float dt)
+void renderer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
 {
 	switch (m_old_engine) {
 	case engine::RASTERIZER:
 		this->rt_draw_scene(scene, shaders);
 		break;
 	case engine::PATHTRACER:
-		this->pt_draw_scene(dt);
+		this->pt_draw_scene(scene, dt);
 		break;
 	}
 }
@@ -319,25 +318,31 @@ renderer::~renderer()
 	cudaDeviceReset();
 }
 
-void renderer::rt_draw_scene(const std::vector<mesh>& scene, const std::vector<shader>& shaders)
+void renderer::rt_draw_scene(const scene& scene, const std::vector<shader>& shaders)
 {
 	m_background->bind();
 	m_bg_shader->bind();
 	m_background->draw();
 
-	scene[0].bind();
-	shaders[0].bind();
-	scene[0].draw();
+	for (const auto& m : scene.meshes()) {
+		m.bind();
+		shaders[0].bind();
+		m.draw();
+	}
 }
 
-__device__ iqvec renderer::ray_color(const ray& r)
+__device__ iqvec renderer::ray_color(const ray& r, scene::gpu_packet packet)
 {
-	triangle tr(iqvec(-0.5f, -0.5f, 0.0f, 1.0f),
-		iqvec( 0.5f, -0.5f, 0.0f, 1.0f),
-		iqvec( 0.0f,  0.5f, 0.0f, 1.0f)
-	);
-	if (tr.intersect(r)) {
-		return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+	for (UINT i = 0; i < packet.indices[0]; i += 3) {
+		// rebuild in CW order
+		iqvec v0 = iqvec::load(packet.vertices[packet.indices[i + 3]].pos, iqvec::usage::POINT);
+		iqvec v1 = iqvec::load(packet.vertices[packet.indices[i + 2]].pos, iqvec::usage::POINT);
+		iqvec v2 = iqvec::load(packet.vertices[packet.indices[i + 1]].pos, iqvec::usage::POINT);
+
+		triangle tr(v0, v1, v2);
+		if (tr.intersect(r)) {
+			return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+		}
 	}
 
 	iqvec dir = r.direction().normalize3();
@@ -345,7 +350,7 @@ __device__ iqvec renderer::ray_color(const ray& r)
 	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 }
 
-__global__ static void render_kernel(renderer::pixel* fb, int width, int height)
+__global__ static void render_kernel(renderer::pixel* fb, int width, int height, scene::gpu_packet packet)
 {
 	const int y = threadIdx.y + blockIdx.y * blockDim.y;
 	const int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -365,7 +370,7 @@ __global__ static void render_kernel(renderer::pixel* fb, int width, int height)
 	iqvec crt_pixel = pixel00 + x * du + y * dv;
 	ray r = ray(center, crt_pixel - center);
 
-	iqvec color = renderer::ray_color(r);
+	iqvec color = renderer::ray_color(r, packet);
 	color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
 	color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
 	color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
@@ -377,7 +382,7 @@ __global__ static void render_kernel(renderer::pixel* fb, int width, int height)
 	fb[pixelid].a = 255;
 }
 
-void renderer::pt_draw_scene(float dt)
+void renderer::pt_draw_scene(const scene& scene, float dt)
 {
 	cudaError cderr;
 
@@ -395,10 +400,20 @@ void renderer::pt_draw_scene(float dt)
 		dim3 threads(tx, ty);
 		RENDERER_THROW_CUDA(cudaGetLastError());
 		size_t fbsize = num_pixels * sizeof(pixel);
+
+		// copy the framebuffer from device to host
 		RENDERER_THROW_CUDA(cudaDeviceSynchronize());	// synchronize before calling the kernel, so that it runs for half a second
 		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
 		m_ptimage_updated = true;
-		render_kernel<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height);
+
+		// copy the scene data from host to device
+		if (d_packet.vertices != nullptr) {
+			RENDERER_THROW_CUDA(cudaFree(d_packet.vertices));
+			RENDERER_THROW_CUDA(cudaFree(d_packet.indices));
+			RENDERER_THROW_CUDA(cudaFree(d_packet.model_types));
+		}
+		d_packet = scene.build_packet();
+		render_kernel<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height, d_packet);
 	}
 }
 

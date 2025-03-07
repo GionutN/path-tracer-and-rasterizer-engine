@@ -33,8 +33,8 @@ public:
 	enum class usage
 	{
 		INVALID = -1,
-		POINT,
 		DIRECTION,
+		POINT,
 		MISCELLANEOUS,
 		NUMUSAGES
 	};
@@ -42,11 +42,11 @@ public:
 public:
 	__host__ __device__ iqvec(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 	__host__ __device__ iqvec(float val = 0.0f) { x = y = z = w = val; }
-	__host__ __device__ static inline iqvec load(const vec2& other) {
-		return iqvec(other.x, other.y, 0.0f, 0.0f);
+	__host__ __device__ static inline iqvec load(const vec2& other, usage u) {
+		return iqvec(other.x, other.y, 0.0f, (float)u);
 	}
-	__host__ __device__ static inline iqvec load(const vec3& other) {
-		return iqvec(other.x, other.y, other.z, 0.0f);
+	__host__ __device__ static inline iqvec load(const vec3& other, usage u) {
+		return iqvec(other.x, other.y, other.z, (float)u);
 	}
 	__host__ __device__ inline vec2 store2() const {
 		return vec2(x, y);

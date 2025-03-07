@@ -2,12 +2,19 @@
 
 #include "renderer.h"
 
-mesh::mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids)
+mesh::mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids, type t)
 	:
 	m_vertices(verts),
-	m_indices(ids)
+	m_indices(ids),
+	m_mesh_type(t)
 {
 	this->setup_mesh();
+}
+
+mesh::mesh(type t)
+	:
+	m_mesh_type(t)
+{
 }
 
 mesh::~mesh()
@@ -60,9 +67,9 @@ void mesh::setup_mesh()
 tri::tri()
 {
 	m_vertices = {
-		{vec2( 0.0f,  0.5f)},
-		{vec2( 0.5f, -0.5f)},
-		{vec2(-0.5f, -0.5f)}
+		{vec3( 0.0f,  0.5f, 0.0f)},
+		{vec3( 0.5f, -0.5f, 0.0f)},
+		{vec3(-0.5f, -0.5f, 0.0f)}
 	};
 
 	m_indices = {
@@ -75,10 +82,10 @@ tri::tri()
 quad::quad()
 {
 	m_vertices = {
-		{vec2(-0.5f,  0.5f)},
-		{vec2( 0.5f,  0.5f)},
-		{vec2( 0.5f, -0.5f)},
-		{vec2(-0.5f, -0.5f)},
+		{vec3(-0.5f,  0.5f, 0.0f)},
+		{vec3( 0.5f,  0.5f, 0.0f)},
+		{vec3( 0.5f, -0.5f, 0.0f)},
+		{vec3(-0.5f, -0.5f, 0.0f)},
 	};
 
 	m_indices = {
@@ -93,15 +100,15 @@ reg_polygon::reg_polygon(UINT vertices)
 {
 	vertices = vertices > 2 ? vertices : 3;
 	float theta = tau / vertices;
-	m_vertices.emplace_back(vec2());
+	m_vertices.emplace_back(vec3());
 	
-	iqvec vertex(0.5, 0.0f, 0.0f, 0.0f);
-	m_vertices.emplace_back(vertex.store2());
+	iqvec vertex(0.5f, 0.0f, 0.0f, 0.0f);
+	m_vertices.emplace_back(vertex.store3());
 	iqmat transform = iqmat::rotation_z(theta);
 
 	for (UINT i = 1; i < vertices; i++) {
 		vertex.transform(transform, iqvec::usage::POINT);
-		m_vertices.emplace_back(vertex.store2());
+		m_vertices.emplace_back(vertex.store3());
 	}
 
 	for (UINT i = 1; i < vertices; i++) {
