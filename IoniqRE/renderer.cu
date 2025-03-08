@@ -333,15 +333,17 @@ void renderer::rt_draw_scene(const scene& scene, const std::vector<shader>& shad
 
 __device__ iqvec renderer::ray_color(const ray& r, scene::gpu_packet packet)
 {
-	for (UINT i = 0; i < packet.indices[0]; i += 3) {
-		// rebuild in CW order
-		iqvec v0 = iqvec::load(packet.vertices[packet.indices[i + 3]].pos, iqvec::usage::POINT);
-		iqvec v1 = iqvec::load(packet.vertices[packet.indices[i + 2]].pos, iqvec::usage::POINT);
-		iqvec v2 = iqvec::load(packet.vertices[packet.indices[i + 1]].pos, iqvec::usage::POINT);
+	if (packet.vertices != nullptr) {
+		for (UINT i = 0; i < packet.indices[0]; i += 3) {
+			// rebuild in CW order
+			iqvec v0 = iqvec::load(packet.vertices[packet.indices[i + 3]].pos, iqvec::usage::POINT);
+			iqvec v1 = iqvec::load(packet.vertices[packet.indices[i + 2]].pos, iqvec::usage::POINT);
+			iqvec v2 = iqvec::load(packet.vertices[packet.indices[i + 1]].pos, iqvec::usage::POINT);
 
-		triangle tr(v0, v1, v2);
-		if (tr.intersect(r)) {
-			return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+			triangle tr(v0, v1, v2);
+			if (tr.intersect(r)) {
+				return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+			}
 		}
 	}
 
@@ -406,13 +408,21 @@ void renderer::pt_draw_scene(const scene& scene, float dt)
 		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
 		m_ptimage_updated = true;
 
-		// copy the scene data from host to device
-		if (d_packet.vertices != nullptr) {
-			RENDERER_THROW_CUDA(cudaFree(d_packet.vertices));
-			RENDERER_THROW_CUDA(cudaFree(d_packet.indices));
-			RENDERER_THROW_CUDA(cudaFree(d_packet.model_types));
+		// TODO:
+		// path-tracer multi-sampling (ever-converging)
+		// model class? that refers to an array of meshes and shaders, for instancing
+		// refering based on a name (giving names to meshes and materials)
+		// sphere mesh class
+
+		// copy the scene data from host to device only if changed
+		if (scene.modified()) {
+			if (d_packet.vertices != nullptr) {
+				RENDERER_THROW_CUDA(cudaFree(d_packet.vertices));
+				RENDERER_THROW_CUDA(cudaFree(d_packet.indices));
+				RENDERER_THROW_CUDA(cudaFree(d_packet.model_types));
+			}
+			d_packet = scene.build_packet();
 		}
-		d_packet = scene.build_packet();
 		render_kernel<<<blocks, threads>>>(m_dev_pixel_buffer, m_wnd->width, m_wnd->height, d_packet);
 	}
 }

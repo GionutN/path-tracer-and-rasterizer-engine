@@ -13,6 +13,8 @@ scene::scene()
 
 void scene::add(const mesh& m)
 {
+	m_modified = true;
+
 	m_models.push_back(m);
 	m_model_types[(size_t)m.get_type()]++;
 
@@ -22,6 +24,8 @@ void scene::add(const mesh& m)
 
 void scene::change(const mesh& m)
 {
+	m_modified = true;
+
 	m_vertices -= m_models[0].get_vertices().size();
 	m_indices -= m_models[0].get_indices().size();
 	m_models[0] = m;
@@ -31,6 +35,7 @@ void scene::change(const mesh& m)
 
 scene::gpu_packet scene::build_packet() const
 {
+	m_modified = false;
 	if (m_vertices == 0) {
 		return { nullptr, nullptr, nullptr };
 	}
@@ -65,11 +70,11 @@ scene::gpu_packet scene::build_packet() const
 	UINT* indices;
 	UINT* model_types;
 
-	RENDERER_THROW_CUDA(cudaMalloc((void**)&vertices, m_vertices * sizeof(vertex)));
-	RENDERER_THROW_CUDA(cudaMalloc((void**)&indices, (m_indices + 1) * sizeof(UINT)));
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&vertices,    m_vertices * sizeof(vertex)));
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&indices,     (m_indices + 1) * sizeof(UINT)));
 	RENDERER_THROW_CUDA(cudaMalloc((void**)&model_types, (size_t)mesh::type::NUMTYPES * sizeof(mesh::type)));
-	RENDERER_THROW_CUDA(cudaMemcpy(vertices, packet.vertices, m_vertices * sizeof(vertex), cudaMemcpyHostToDevice));
-	RENDERER_THROW_CUDA(cudaMemcpy(indices, packet.indices, (m_indices + 1) * sizeof(UINT), cudaMemcpyHostToDevice));
+	RENDERER_THROW_CUDA(cudaMemcpy(vertices,    packet.vertices,    m_vertices * sizeof(vertex), cudaMemcpyHostToDevice));
+	RENDERER_THROW_CUDA(cudaMemcpy(indices,     packet.indices,     (m_indices + 1) * sizeof(UINT), cudaMemcpyHostToDevice));
 	RENDERER_THROW_CUDA(cudaMemcpy(model_types, packet.model_types, (size_t)mesh::type::NUMTYPES * sizeof(mesh::type), cudaMemcpyHostToDevice));
 
 	// delete and reassign the cpu memory data

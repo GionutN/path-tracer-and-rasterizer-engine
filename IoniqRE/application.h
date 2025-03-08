@@ -33,5 +33,4 @@ private:
 
 	scene meshes;
 	std::vector<shader> shaders;
-	UINT verts = 3;
 };

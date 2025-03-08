@@ -14,7 +14,7 @@ application::application(const ref<window>& wnd)
 	timer::init();
 	renderer::init(wnd);
 
-	meshes.add(reg_polygon(3));
+	meshes.add(tri());
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 }
 
@@ -61,19 +61,6 @@ void application::update_frame()
 		}
 		break;
 	}
-
-	switch (mouse::get()->get_event().get_type()) {
-	case mouse::event::type::WHEELUP:
-		verts++;
-		meshes.change(reg_polygon(verts));
-		break;
-	case mouse::event::type::WHEELDOWN:
-		verts--;
-		meshes.change(reg_polygon(verts));
-		break;
-	}
-	if (verts < 3) verts = 3;
-	if (verts > 100) verts = 100;
 }
 
 void application::draw_frame()

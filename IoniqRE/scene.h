@@ -24,6 +24,7 @@ public:
 
 	void add(const mesh& m);
 	void change(const mesh& m);
+	inline bool modified() const { return m_modified; }
 	gpu_packet build_packet() const;
 
 private:
@@ -32,5 +33,6 @@ private:
 
 	size_t m_vertices = 0;	// total number of vertices
 	size_t m_indices = 0;	// total number of indices
+	mutable bool m_modified = true;	// if the scene changes, update the gpu packet
 
 };
