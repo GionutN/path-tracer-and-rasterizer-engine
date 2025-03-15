@@ -27,7 +27,7 @@ public:
 
 private:
 	path_tracer();
-	~path_tracer() = default;
+	~path_tracer();
 
 private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;

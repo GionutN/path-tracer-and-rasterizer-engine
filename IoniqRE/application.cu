@@ -53,13 +53,9 @@ void application::update_frame()
 	keyboard::event e = keyboard::get()->get_event();
 	switch (e.get_type()) {
 	case keyboard::event::type::PRESS:
-		if (e.get_key() == 'R') {
-			RENDERER->change_engine(renderer::engine::RASTERIZER);
-		}
 		if (e.get_key() == 'P') {
-			RENDERER->change_engine(renderer::engine::PATHTRACER);
+			renderer::get()->toggle_engine();
 		}
-		break;
 	}
 }
 

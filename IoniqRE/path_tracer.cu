@@ -26,6 +26,102 @@ path_tracer* path_tracer::get()
 	return g_path_tracer;
 }
 
+path_tracer::path_tracer()
+{
+	HRESULT hr;
+	cudaError cderr;
+	renderer_base* rnd_base = RENDERER;
+
+	wrl::ComPtr<ID3D11Texture2D> back_buffer;
+	RENDERER_THROW_FAILED(rnd_base->swap_chain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &back_buffer));
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
+
+	D3D11_TEXTURE2D_DESC tex_desc = {};
+	tex_desc.Width  = window::width;
+	tex_desc.Height = window::height;
+	tex_desc.MipLevels = 1;
+	tex_desc.ArraySize = 1;
+	tex_desc.Format = rnd_base->pixel_format();
+	tex_desc.SampleDesc.Count = 1;	// non multisampled
+	tex_desc.SampleDesc.Quality = 0;
+	tex_desc.Usage = D3D11_USAGE_DYNAMIC;
+	tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	tex_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	tex_desc.MiscFlags = 0;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateTexture2D(&tex_desc, nullptr, &m_texture));
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC tex_view = {};
+	tex_view.Format = tex_desc.Format;
+	tex_view.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	tex_view.Texture2D.MipLevels = 1;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateShaderResourceView(m_texture.Get(), &tex_view, &m_texture_view));
+
+	wrl::ComPtr<ID3DBlob> blob;
+	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"PTPixelShader.cso", &blob));
+	RENDERER_THROW_FAILED(rnd_base->device()->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_pixel_shader));
+
+	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"PTVertexShader.cso", &blob));
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_vertex_shader));
+
+	D3D11_INPUT_ELEMENT_DESC vertex_layout[2] = {
+		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA}
+	};
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateInputLayout(vertex_layout, (UINT)std::size(vertex_layout), blob->GetBufferPointer(), blob->GetBufferSize(), &m_layout));
+
+	const float vertices[] = {
+		-1.0f,  1.0f, 0.0f, 0.0f,
+		 1.0f,  1.0f, 1.0f, 0.0f,
+		 1.0f, -1.0f, 1.0f, 1.0f,
+
+		 1.0f, -1.0f, 1.0f, 1.0f,
+		-1.0f, -1.0f, 0.0f, 1.0f,
+		-1.0f,  1.0f, 0.0f, 0.0f
+	};
+	D3D11_BUFFER_DESC bdesc = {};
+	bdesc.ByteWidth = (UINT)sizeof(vertices);
+	bdesc.Usage = D3D11_USAGE_DEFAULT;
+	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bdesc.CPUAccessFlags = 0;
+	bdesc.MiscFlags = 0;
+	bdesc.StructureByteStride = 4 * (UINT)sizeof(float);
+
+	D3D11_SUBRESOURCE_DATA bdata = {};
+	bdata.pSysMem = vertices;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateBuffer(&bdesc, &bdata, &m_vertex_buffer));
+
+	D3D11_SAMPLER_DESC smpl_desc = {};
+	smpl_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	smpl_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	smpl_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	smpl_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	smpl_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	smpl_desc.MinLOD = 0.0f;
+	smpl_desc.MaxLOD = D3D11_FLOAT32_MAX;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateSamplerState(&smpl_desc, &m_texture_sampler));
+
+	size_t num_pixels = window::width * window::height;
+	size_t fbsize = num_pixels * sizeof(pixel);
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
+	m_host_pixel_buffer = new pixel[num_pixels];
+	memset(m_host_pixel_buffer, 0, fbsize);
+	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, fbsize));
+}
+
+path_tracer::~path_tracer()
+{
+	cudaDeviceSynchronize();
+	if (m_dev_pixel_buffer) {
+		cudaFree(m_dev_pixel_buffer);
+		m_dev_pixel_buffer = nullptr;
+	}
+	if (m_host_pixel_buffer) {
+		delete[] m_host_pixel_buffer;
+		m_host_pixel_buffer = nullptr;
+	}
+	cudaDeviceReset();
+}
+
 void path_tracer::begin_frame()
 {
 	RENDERER->context()->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
@@ -133,6 +229,8 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 	time += dt;
 
 	// let the compute kernel run for half a second, then retrieve the computed image
+	// there is a problem here, the timer get's updated only when the currently selected engine is this one
+	// on engine switch to this one, the kernel call must happen right away
 	if (time > 0.5f) {
 		time = 0.0f;
 
@@ -164,88 +262,6 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 			}
 			d_packet = scene.build_packet();
 		}
-		render_kernel<<<blocks, threads>>>(m_dev_pixel_buffer, window::width, window::height, d_packet);
+		render_kernel << <blocks, threads >> > (m_dev_pixel_buffer, window::width, window::height, d_packet);
 	}
-}
-
-path_tracer::path_tracer()
-{
-	HRESULT hr;
-	cudaError cderr;
-	renderer_base* rnd_base = RENDERER;
-
-	wrl::ComPtr<ID3D11Texture2D> back_buffer;
-	RENDERER_THROW_FAILED(rnd_base->swap_chain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &back_buffer));
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateRenderTargetView(back_buffer.Get(), nullptr, &m_target));
-
-	D3D11_TEXTURE2D_DESC tex_desc = {};
-	tex_desc.Width  = window::width;
-	tex_desc.Height = window::height;
-	tex_desc.MipLevels = 1;
-	tex_desc.ArraySize = 1;
-	tex_desc.Format = rnd_base->pixel_format();
-	tex_desc.SampleDesc.Count = 1;	// non multisampled
-	tex_desc.SampleDesc.Quality = 0;
-	tex_desc.Usage = D3D11_USAGE_DYNAMIC;
-	tex_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	tex_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	tex_desc.MiscFlags = 0;
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateTexture2D(&tex_desc, nullptr, &m_texture));
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC tex_view = {};
-	tex_view.Format = tex_desc.Format;
-	tex_view.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	tex_view.Texture2D.MipLevels = 1;
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateShaderResourceView(m_texture.Get(), &tex_view, &m_texture_view));
-
-	wrl::ComPtr<ID3DBlob> blob;
-	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"PTPixelShader.cso", &blob));
-	RENDERER_THROW_FAILED(rnd_base->device()->CreatePixelShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_pixel_shader));
-
-	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"PTVertexShader.cso", &blob));
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_vertex_shader));
-
-	D3D11_INPUT_ELEMENT_DESC vertex_layout[2] = {
-		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA}
-	};
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateInputLayout(vertex_layout, (UINT)std::size(vertex_layout), blob->GetBufferPointer(), blob->GetBufferSize(), &m_layout));
-
-	const float vertices[] = {
-		-1.0f,  1.0f, 0.0f, 0.0f,
-		 1.0f,  1.0f, 1.0f, 0.0f,
-		 1.0f, -1.0f, 1.0f, 1.0f,
-
-		 1.0f, -1.0f, 1.0f, 1.0f,
-		-1.0f, -1.0f, 0.0f, 1.0f,
-		-1.0f,  1.0f, 0.0f, 0.0f
-	};
-	D3D11_BUFFER_DESC bdesc = {};
-	bdesc.ByteWidth = (UINT)sizeof(vertices);
-	bdesc.Usage = D3D11_USAGE_DEFAULT;
-	bdesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bdesc.CPUAccessFlags = 0;
-	bdesc.MiscFlags = 0;
-	bdesc.StructureByteStride = 4 * (UINT)sizeof(float);
-
-	D3D11_SUBRESOURCE_DATA bdata = {};
-	bdata.pSysMem = vertices;
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateBuffer(&bdesc, &bdata, &m_vertex_buffer));
-
-	D3D11_SAMPLER_DESC smpl_desc = {};
-	smpl_desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	smpl_desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	smpl_desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	smpl_desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	smpl_desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	smpl_desc.MinLOD = 0.0f;
-	smpl_desc.MaxLOD = D3D11_FLOAT32_MAX;
-	RENDERER_THROW_FAILED(rnd_base->device()->CreateSamplerState(&smpl_desc, &m_texture_sampler));
-
-	size_t num_pixels = window::width * window::height;
-	size_t fbsize = num_pixels * sizeof(pixel);
-	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
-	m_host_pixel_buffer = new pixel[num_pixels];
-	memset(m_host_pixel_buffer, 0, fbsize);
-	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, fbsize));
 }

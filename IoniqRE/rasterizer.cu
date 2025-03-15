@@ -26,46 +26,6 @@ rasterizer* rasterizer::get()
 	return g_rasterizer;
 }
 
-void rasterizer::begin_frame()
-{
-	const iqvec clear_col = RENDERER->clear_color();
-	float clear[4] = { clear_col[0], clear_col[1], clear_col[2], clear_col[3] };
-	RENDERER->context()->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
-	RENDERER->context()->ClearRenderTargetView(m_target.Get(), clear);
-}
-
-void rasterizer::end_frame()
-{
-	HRESULT hr;
-	renderer_base* rnd_base = RENDERER;
-
-	// copy from a multi-sampled texture to a non-multisampled texture
-	rnd_base->context()->ResolveSubresource(m_nonmsaa_intermediate_texture.Get(), 0, m_msaa_target_texture.Get(), 0, rnd_base->pixel_format());
-
-	// copy to the back buffer for presenting
-	wrl::ComPtr<ID3D11Texture2D> back_buffer;
-	RENDERER_THROW_FAILED(rnd_base->swap_chain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &back_buffer));
-	rnd_base->context()->CopyResource(back_buffer.Get(), m_nonmsaa_intermediate_texture.Get());
-
-	hr = rnd_base->swap_chain()->Present(1, 0);	// 1 for vsync;
-	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
-		throw RENDERER_EXCEPTION(rnd_base->device()->GetDeviceRemovedReason());
-	}
-}
-
-void rasterizer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
-{
-	m_background->bind();
-	m_bg_shader->bind();
-	m_background->draw();
-
-	for (const auto& m : scene.meshes()) {
-		m.bind();
-		shaders[0].bind();
-		m.draw();
-	}
-}
-
 rasterizer::rasterizer()
 	:
 	m_samples(8)
@@ -123,4 +83,44 @@ rasterizer::rasterizer()
 	vport.MaxDepth = 1.0f;
 	rnd_base->context()->RSSetViewports(1, &vport);
 	rnd_base->context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+void rasterizer::begin_frame()
+{
+	const iqvec clear_col = RENDERER->clear_color();
+	float clear[4] = { clear_col[0], clear_col[1], clear_col[2], clear_col[3] };
+	RENDERER->context()->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
+	RENDERER->context()->ClearRenderTargetView(m_target.Get(), clear);
+}
+
+void rasterizer::end_frame()
+{
+	HRESULT hr;
+	renderer_base* rnd_base = RENDERER;
+
+	// copy from a multi-sampled texture to a non-multisampled texture
+	rnd_base->context()->ResolveSubresource(m_nonmsaa_intermediate_texture.Get(), 0, m_msaa_target_texture.Get(), 0, rnd_base->pixel_format());
+
+	// copy to the back buffer for presenting
+	wrl::ComPtr<ID3D11Texture2D> back_buffer;
+	RENDERER_THROW_FAILED(rnd_base->swap_chain()->GetBuffer(0, __uuidof(ID3D11Texture2D), &back_buffer));
+	rnd_base->context()->CopyResource(back_buffer.Get(), m_nonmsaa_intermediate_texture.Get());
+
+	hr = rnd_base->swap_chain()->Present(1, 0);	// 1 for vsync;
+	if (hr == DXGI_ERROR_DEVICE_REMOVED) {
+		throw RENDERER_EXCEPTION(rnd_base->device()->GetDeviceRemovedReason());
+	}
+}
+
+void rasterizer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
+{
+	m_background->bind();
+	m_bg_shader->bind();
+	m_background->draw();
+
+	for (const auto& m : scene.meshes()) {
+		m.bind();
+		shaders[0].bind();
+		m.draw();
+	}
 }
