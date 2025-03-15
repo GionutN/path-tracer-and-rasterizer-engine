@@ -54,6 +54,15 @@
     <CudaCompile Include="scene.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="renderer_base.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="rasterizer.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
+    <CudaCompile Include="path_tracer.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -105,6 +114,18 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="scene.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer_template.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer_base.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="rasterizer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="path_tracer.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

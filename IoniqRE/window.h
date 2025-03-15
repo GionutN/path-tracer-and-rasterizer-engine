@@ -22,7 +22,7 @@ public:
 	};
 
 public:
-	window(HINSTANCE hInstance, UINT16 width, UINT16 height);
+	window(HINSTANCE hInstance);
 	window(const window&) = delete;
 	window& operator=(const window&) = delete;
 	~window();
@@ -37,8 +37,8 @@ private:
 
 public:
 	static constexpr const char* window_class_name = "Ioniq Window Class";
-	const UINT16 width;
-	const UINT16 height;
+	static constexpr UINT16 width = 1920;
+	static constexpr UINT16 height = 1080;
 
 private:
 	HWND m_hWnd;

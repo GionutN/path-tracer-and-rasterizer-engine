@@ -12,7 +12,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 {
 	try {
 		// make a shared ptr to a window because a unique ptr can not be passed to the application constructor
-		ref<window> w = std::make_shared<window>(hInstance, 1920, 1080);
+		ref<window> w = std::make_shared<window>(hInstance);
 		application app(w);
 
 		while (app.process_message()) {

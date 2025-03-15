@@ -8,10 +8,8 @@
 #include "timer.h"
 #include "renderer.h"
 
-window::window(HINSTANCE hInstance, UINT16 width, UINT16 height)
+window::window(HINSTANCE hInstance)
 	:
-	width(width),
-	height(height),
 	m_title("Ioniq Rendering Engine"),
 	m_hInstance(hInstance)
 {
