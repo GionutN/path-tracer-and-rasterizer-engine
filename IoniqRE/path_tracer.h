@@ -1,5 +1,7 @@
 #pragma once
 
+#include <curand_kernel.h>
+
 #include "renderer_base.h"
 #include "renderer_template.h"
 
@@ -39,10 +41,16 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_layout;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_vertex_buffer;
 	D3D11_MAPPED_SUBRESOURCE m_mapped_texture;
+
+	const dim3 m_threads_per_block;
+	const dim3 m_blocks_per_grid;
+	const size_t m_fbsize;
+	const size_t m_num_pixels;
+	curandState* m_dev_rand_state;
+
 	pixel* m_dev_pixel_buffer;
 	pixel* m_host_pixel_buffer;
 	scene::gpu_packet d_packet = { nullptr, nullptr, nullptr };
-
-	bool m_ptimage_updated;
+	bool m_image_updated;
 
 };

@@ -6,12 +6,14 @@
 #include "mouse.h"
 #include "timer.h"
 #include "renderer.h"
+#include "random.h"
 
 application::application(const ref<window>& wnd)
 	:
 	m_wnd(wnd)
 {
 	timer::init();
+	random::init();
 	renderer::init(wnd);
 
 	meshes.add(tri());
@@ -21,6 +23,7 @@ application::application(const ref<window>& wnd)
 application::~application()
 {
 	renderer::shutdown();
+	random::shutdown();
 	timer::shutdown();
 }
 

@@ -94,6 +94,7 @@
     <CudaCompile Include="mesh.cu" />
     <CudaCompile Include="mouse.cu" />
     <CudaCompile Include="path_tracer.cu" />
+    <CudaCompile Include="random.cu" />
     <CudaCompile Include="ray.cu" />
     <CudaCompile Include="renderer.cu" />
     <CudaCompile Include="renderer_base.cu" />
@@ -115,6 +116,7 @@
     <ClInclude Include="mesh.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="path_tracer.h" />
+    <ClInclude Include="random.h" />
     <ClInclude Include="rasterizer.h" />
     <ClInclude Include="ray.h" />
     <ClInclude Include="renderer.h" />

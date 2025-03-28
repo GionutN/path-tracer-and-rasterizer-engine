@@ -44,6 +44,7 @@ renderer* renderer::get()
 
 void renderer::begin_frame()
 {
+	// make sure the engine is not changing mid-frame
 	if (m_new_engine != m_engine_idx) {
 		m_engine_idx = m_new_engine;
 	}

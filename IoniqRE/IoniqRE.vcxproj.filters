@@ -63,6 +63,9 @@
     <CudaCompile Include="path_tracer.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="random.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -126,6 +129,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="path_tracer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="random.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

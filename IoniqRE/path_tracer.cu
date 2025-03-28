@@ -1,6 +1,11 @@
 #include "path_tracer.h"
 
 #include <d3dcompiler.h>
+#include <device_launch_parameters.h>
+
+#include "random.h"
+
+static constexpr UINT threads = 16;
 
 static path_tracer* g_path_tracer = nullptr;
 
@@ -26,7 +31,24 @@ path_tracer* path_tracer::get()
 	return g_path_tracer;
 }
 
+__global__ static void renderer_init_kernel(UINT width, UINT height, curandState* rand_states)
+{
+	const UINT y = threadIdx.y + blockIdx.y * blockDim.y;
+	const UINT x = threadIdx.x + blockIdx.x * blockDim.x;
+	if (y >= height || x >= width) {
+		return;
+	}
+	const UINT pixelid = y * width + x;
+	// each thread gets same seed, a different sequence number, no offset
+	curand_init(1984, pixelid, 0, &rand_states[pixelid]);
+}
+
 path_tracer::path_tracer()
+	:
+	m_blocks_per_grid(window::width / threads + 1, window::height / threads + 1),
+	m_threads_per_block(threads, threads),
+	m_num_pixels(window::height * window::width),
+	m_fbsize(window::height * window::width * sizeof(pixel))
 {
 	HRESULT hr;
 	cudaError cderr;
@@ -100,12 +122,15 @@ path_tracer::path_tracer()
 	smpl_desc.MaxLOD = D3D11_FLOAT32_MAX;
 	RENDERER_THROW_FAILED(rnd_base->device()->CreateSamplerState(&smpl_desc, &m_texture_sampler));
 
-	size_t num_pixels = window::width * window::height;
-	size_t fbsize = num_pixels * sizeof(pixel);
-	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, fbsize));
-	m_host_pixel_buffer = new pixel[num_pixels];
-	memset(m_host_pixel_buffer, 0, fbsize);
-	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, fbsize));
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, m_fbsize));
+	m_host_pixel_buffer = new pixel[m_num_pixels];
+	memset(m_host_pixel_buffer, 0, m_fbsize);
+	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, m_fbsize));
+	
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_rand_state, m_num_pixels * sizeof(curandState)));
+	renderer_init_kernel<<<m_blocks_per_grid, m_threads_per_block>>>(window::width, window::height, m_dev_rand_state);
+	RENDERER_THROW_CUDA(cudaGetLastError());
+	RENDERER_THROW_CUDA(cudaDeviceSynchronize());
 }
 
 path_tracer::~path_tracer()
@@ -118,6 +143,10 @@ path_tracer::~path_tracer()
 	if (m_host_pixel_buffer) {
 		delete[] m_host_pixel_buffer;
 		m_host_pixel_buffer = nullptr;
+	}
+	if (m_dev_rand_state) {
+		cudaFree(m_dev_rand_state);
+		m_dev_rand_state = nullptr;
 	}
 	cudaDeviceReset();
 }
@@ -133,7 +162,7 @@ void path_tracer::end_frame()
 	renderer_base* rnd_base = RENDERER;
 
 	// update the texture only when the pathtracer updates the pixel buffer
-	if (m_ptimage_updated) {
+	if (m_image_updated) {
 		RENDERER_THROW_FAILED(rnd_base->context()->Map(m_texture.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m_mapped_texture));
 
 		// setup parameteres for copying
@@ -149,7 +178,7 @@ void path_tracer::end_frame()
 		// release the adapter memory
 		RENDERER->context()->Unmap(m_texture.Get(), 0);
 
-		m_ptimage_updated = false;
+		m_image_updated = false;
 	}
 
 	// render offscreen scene texture to back buffer
@@ -189,14 +218,17 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 }
 
-__global__ static void render_kernel(path_tracer::pixel* fb, int width, int height, scene::gpu_packet packet)
+__global__ static void render_kernel(path_tracer::pixel* fb, UINT width, UINT height, scene::gpu_packet packet, curandState* rand_states)
 {
-	const int y = threadIdx.y + blockIdx.y * blockDim.y;
-	const int x = threadIdx.x + blockIdx.x * blockDim.x;
+	const UINT y = threadIdx.y + blockIdx.y * blockDim.y;
+	const UINT x = threadIdx.x + blockIdx.x * blockDim.x;
 	if (y >= height || x >= width) {
 		return;
 	}
 	// compute the viewing direction of each pixel
+	const UINT pixelid = y * width + x;
+	curandState* local_state = &rand_states[pixelid];
+
 	const float aspect_ratio = (float)width / height;
 	iqvec center = iqvec(0.0f, 0.0f, 2.0f, 1.0f);
 	iqvec viewport = iqvec(0.0f, 0.0f, 1.0f, 0.0f);
@@ -206,18 +238,23 @@ __global__ static void render_kernel(path_tracer::pixel* fb, int width, int heig
 	iqvec dv = viewport_v / height;
 	iqvec topleft = center - viewport - (viewport_u + viewport_v) / 2.0f;
 	iqvec pixel00 = topleft + 0.5f * (du + dv);
-	iqvec crt_pixel = pixel00 + x * du + y * dv;
-	ray r = ray(center, crt_pixel - center);
 
-	iqvec color = path_tracer::ray_color(r, packet);
-	color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
-	color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
-	color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
+	iqvec path_color;
+	for (int i = 0; i < 8; i++) {
+		// a pixel has width and height 1, so from its center add an offset of (-0.5; 0.5)
+		iqvec crt_pixel = pixel00 + (x + random::real(local_state, -0.5f, 0.5f)) * du + (y + random::real(local_state, -0.5f, 0.5f)) * dv;
+		ray r = ray(center, crt_pixel - center);
 
-	const int pixelid = y * width + x;
-	fb[pixelid].r = (uint8_t)(255.0f * color.x);
-	fb[pixelid].g = (uint8_t)(255.0f * color.y);
-	fb[pixelid].b = (uint8_t)(255.0f * color.z);
+		iqvec color = path_tracer::ray_color(r, packet);
+		color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
+		color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
+		color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
+		path_color += color;
+	}
+	path_color /= 8;
+	fb[pixelid].r = (uint8_t)(255.0f * path_color.x);
+	fb[pixelid].g = (uint8_t)(255.0f * path_color.y);
+	fb[pixelid].b = (uint8_t)(255.0f * path_color.z);
 	fb[pixelid].a = 255;
 }
 
@@ -234,21 +271,16 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 	if (time > 0.5f) {
 		time = 0.0f;
 
-		UINT tx = 16, ty = 16;
-		UINT num_pixels = window::height * window::width;
-
-		dim3 blocks(window::width / tx + 1, window::height / ty + 1);
-		dim3 threads(tx, ty);
-		RENDERER_THROW_CUDA(cudaGetLastError());
-		size_t fbsize = num_pixels * sizeof(pixel);
-
 		// copy the framebuffer from device to host
 		RENDERER_THROW_CUDA(cudaDeviceSynchronize());	// synchronize before calling the kernel, so that it runs for half a second
-		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, fbsize, cudaMemcpyDeviceToHost));
-		m_ptimage_updated = true;
+		RENDERER_THROW_CUDA(cudaGetLastError());
+		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, m_fbsize, cudaMemcpyDeviceToHost));
+		m_image_updated = true;
 
 		// TODO:
 		// path-tracer multi-sampling (ever-converging)
+		// update the ray-sphere and triangle intersection code
+		// make a fast sqrt approximation function
 		// model class? that refers to an array of meshes and shaders, for instancing
 		// refering based on a name (giving names to meshes and materials)
 		// sphere mesh class
@@ -262,6 +294,6 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 			}
 			d_packet = scene.build_packet();
 		}
-		render_kernel << <blocks, threads >> > (m_dev_pixel_buffer, window::width, window::height, d_packet);
+		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>>(m_dev_pixel_buffer, window::width, window::height, d_packet, m_dev_rand_state);
 	}
 }
