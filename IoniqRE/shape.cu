@@ -1,6 +1,8 @@
 #include "shader.h"
 #include "shape.h"
 
+#define MOLLER_TRUMBORE 1
+
 __device__ sphere::sphere(const iqvec& pos, float radius)
 	:
 	m_position(pos),
@@ -12,12 +14,12 @@ __device__ bool sphere::intersect(const ray& r)
 {
 	const iqvec oc = m_position - r.origin();
 	const float a = r.direction().length3sq();
-	const float b = -2.0f * r.direction().dot3(oc);
+	const float halfb = r.direction().dot3(oc);
 	const float c = oc.length3sq() - m_radius * m_radius;
-	const float delta = b * b - 4 * a * c;
+	const float delta = halfb * halfb - 4 * a * c;
 
 	// compute the ray's intersection point parameter t
-	const float t1 = (-b + sqrtf(delta)) / (2.0f * a);
+	const float t1 = (halfb + sqrtf(delta)) / a;
 	return t1 > 0.0f;
 	
 }
@@ -32,6 +34,33 @@ __device__ triangle::triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2)
 
 __device__ bool triangle::intersect(const ray& r)
 {
+#if MOLLER_TRUMBORE
+	const iqvec v0v1 = m_v1 - m_v0;
+	const iqvec v0v2 = m_v2 - m_v0;
+	const iqvec pvec = r.direction().cross3(v0v2);
+	float det = v0v1.dot3(pvec);
+
+	// check if the ray's direction and the normal are perpendicular (no intersection point)
+	if (is_zero(fabs(det))) {
+		return false;
+	}
+
+	det = 1 / det;
+	iqvec tvec = r.origin() - m_v0;
+	const float u = tvec.dot3(pvec) * det;
+	if (u < 0 || u > 1) {
+		return false;
+	}
+
+	iqvec qvec = tvec.cross3(v0v1);
+	const float v = r.direction().dot3(qvec) * det;
+	if (v < 0 || u + v > 1) {
+		return false;
+	}
+
+	const float t = v0v2.dot3(qvec) * det;
+	return true;
+#else
 	// compute the triangle's normal
 	const iqvec v0v1 = m_v1 - m_v0;
 	const iqvec v0v2 = m_v2 - m_v0;
@@ -75,4 +104,5 @@ __device__ bool triangle::intersect(const ray& r)
 	}
 
 	return true;
+#endif
 }

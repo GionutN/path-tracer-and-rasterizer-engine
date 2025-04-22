@@ -125,7 +125,9 @@ path_tracer::path_tracer()
 	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_pixel_buffer, m_fbsize));
 	m_host_pixel_buffer = new pixel[m_num_pixels];
 	memset(m_host_pixel_buffer, 0, m_fbsize);
+	// clear the accumulated device pixel buffer
 	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, m_fbsize));
+	m_crt_frame = 0ui64;
 	
 	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_rand_state, m_num_pixels * sizeof(curandState)));
 	renderer_init_kernel<<<m_blocks_per_grid, m_threads_per_block>>>(window::width, window::height, m_dev_rand_state);
@@ -218,7 +220,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 }
 
-__global__ static void render_kernel(path_tracer::pixel* fb, UINT width, UINT height, scene::gpu_packet packet, curandState* rand_states)
+__global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, UINT width, UINT height, scene::gpu_packet packet, curandState* rand_states)
 {
 	const UINT y = threadIdx.y + blockIdx.y * blockDim.y;
 	const UINT x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -240,9 +242,12 @@ __global__ static void render_kernel(path_tracer::pixel* fb, UINT width, UINT he
 	iqvec pixel00 = topleft + 0.5f * (du + dv);
 
 	iqvec path_color;
-	for (int i = 0; i < 8; i++) {
+	int samples = 8;
+	for (int i = 0; i < samples; i++) {
 		// a pixel has width and height 1, so from its center add an offset of (-0.5; 0.5)
 		iqvec crt_pixel = pixel00 + (x + random::real(local_state, -0.5f, 0.5f)) * du + (y + random::real(local_state, -0.5f, 0.5f)) * dv;
+
+		// ray direction is NOT normalized
 		ray r = ray(center, crt_pixel - center);
 
 		iqvec color = path_tracer::ray_color(r, packet);
@@ -251,11 +256,19 @@ __global__ static void render_kernel(path_tracer::pixel* fb, UINT width, UINT he
 		color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
 		path_color += color;
 	}
-	path_color /= 8;
-	fb[pixelid].r = (uint8_t)(255.0f * path_color.x);
-	fb[pixelid].g = (uint8_t)(255.0f * path_color.y);
-	fb[pixelid].b = (uint8_t)(255.0f * path_color.z);
-	fb[pixelid].a = 255;
+	path_color /= samples;
+
+	path_tracer::pixel p;
+	p.r = (uint8_t)(255.0f * path_color.x);
+	p.g = (uint8_t)(255.0f * path_color.y);
+	p.b = (uint8_t)(255.0f * path_color.z);
+	p.a = 255;
+
+	// add the computed color to the accumulation buffer
+	fb[pixelid].r = (uint8_t)(((float)p.r + (float)fb[pixelid].r * (num_frame - 1)) / num_frame);
+	fb[pixelid].g = (uint8_t)(((float)p.g + (float)fb[pixelid].g * (num_frame - 1)) / num_frame);
+	fb[pixelid].b = (uint8_t)(((float)p.b + (float)fb[pixelid].b * (num_frame - 1)) / num_frame);
+	fb[pixelid].a = p.a;
 }
 
 void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
@@ -274,13 +287,11 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 		// copy the framebuffer from device to host
 		RENDERER_THROW_CUDA(cudaDeviceSynchronize());	// synchronize before calling the kernel, so that it runs for half a second
 		RENDERER_THROW_CUDA(cudaGetLastError());
+
 		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, m_fbsize, cudaMemcpyDeviceToHost));
 		m_image_updated = true;
 
 		// TODO:
-		// path-tracer multi-sampling (ever-converging)
-		// update the ray-sphere and triangle intersection code
-		// make a fast sqrt approximation function
 		// model class? that refers to an array of meshes and shaders, for instancing
 		// refering based on a name (giving names to meshes and materials)
 		// sphere mesh class
@@ -294,6 +305,13 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 			}
 			d_packet = scene.build_packet();
 		}
-		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>>(m_dev_pixel_buffer, window::width, window::height, d_packet, m_dev_rand_state);
+		// reset the buffer when the kernel is not running
+		if (m_pending_reset) {
+			RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, m_fbsize));
+			m_crt_frame = 0;
+			m_pending_reset = false;
+		}
+		m_crt_frame++;
+		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>>(m_dev_pixel_buffer, m_crt_frame, window::width, window::height, d_packet, m_dev_rand_state);
 	}
 }

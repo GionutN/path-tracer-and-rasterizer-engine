@@ -46,7 +46,7 @@ scene::gpu_packet scene::build_packet() const
 	packet.indices[0] = m_indices;	// set the number of indices as the first element in the array
 	packet.model_types = new UINT[2];
 
-	// bundle all the scene's vertices and indices in one big array
+	// bundle all of the scene's vertices and indices in one big array
 	size_t vert_idx = 0, index_idx = 1;
 	UINT index_offset = 0;	// shift the indices of the model by the total number of vertices from the previously added meshes
 	for (const auto& m : m_models) {

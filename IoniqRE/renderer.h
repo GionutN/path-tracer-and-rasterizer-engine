@@ -31,6 +31,8 @@ public:
 
 	void toggle_engine() { m_new_engine = (engine)(((int)m_new_engine + 1) % 2); }
 
+	void reset();
+
 private:
 	renderer();
 	~renderer() = default;

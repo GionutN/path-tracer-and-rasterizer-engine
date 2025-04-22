@@ -12,6 +12,9 @@ static constexpr float pi_div_4 = 0.78539816339744830961566084581988f;
 static constexpr float one_div_pi = 0.31830988618379067153776752674503f;
 static constexpr float one_div_tau = 0.15915494309189533576888376337251f;
 
+// TODO:
+// make a fast sqrt approximation function
+
 __host__ __device__ static float to_degrees(float radians)
 {
 	return radians * 180.0f / pi;

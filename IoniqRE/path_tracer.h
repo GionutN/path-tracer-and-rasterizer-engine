@@ -27,6 +27,8 @@ public:
 
 	__device__ static iqvec ray_color(const ray& r, scene::gpu_packet packet);
 
+	inline void reset() { m_pending_reset = true; }
+
 private:
 	path_tracer();
 	~path_tracer();
@@ -48,9 +50,11 @@ private:
 	const size_t m_num_pixels;
 	curandState* m_dev_rand_state;
 
-	pixel* m_dev_pixel_buffer;
 	pixel* m_host_pixel_buffer;
+	pixel* m_dev_pixel_buffer;	// ever-converging
+	size_t m_crt_frame;	// the current path-traced frame
 	scene::gpu_packet d_packet = { nullptr, nullptr, nullptr };
 	bool m_image_updated;
+	bool m_pending_reset = false;	// flag for resetting to avoid data race when clearing the buffer
 
 };

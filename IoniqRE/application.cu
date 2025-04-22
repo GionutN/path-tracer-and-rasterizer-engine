@@ -60,6 +60,10 @@ void application::update_frame()
 			renderer::get()->toggle_engine();
 		}
 	}
+
+	if (mouse::get()->button_is_pressed(mouse::button_codes::RIGHT)) {
+		renderer::get()->reset();
+	}
 }
 
 void application::draw_frame()

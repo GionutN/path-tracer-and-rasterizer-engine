@@ -2,9 +2,44 @@
 
 #include <vector>
 #include <array>
+#include <string>
+#include <unordered_map>
 
 #include "mesh.h"
 #include "shape.h"
+#include "model.h"
+
+template<typename T>
+class name_object_map
+{
+public:
+	name_object_map() = default;
+
+	void add(const T& obj, const std::string& name)
+	{
+		m_map.insert({ name, obj });
+		// log if insertion failed
+	}
+	void modify(const std::string& name, const T& obj) {
+		m_map[name] = obj;
+	}
+	void rename(const std::string& old_name, const std::string& new_name) {
+		auto nh = m_map.extract(old_name);
+		if (nh.empty()) {
+			return;
+		}
+
+		nh.key() = new_name;
+		m_map.insert(std::move(nh));
+	}
+	void remove(const std::string& name) {
+		m_map.erase(name);
+	}
+
+private:
+	std::unordered_map<std::string, T> m_map;
+
+};
 
 class scene
 {
@@ -34,5 +69,9 @@ private:
 	size_t m_vertices = 0;	// total number of vertices
 	size_t m_indices = 0;	// total number of indices
 	mutable bool m_modified = true;	// if the scene changes, update the gpu packet
+
+	// new scene data members
+	//name_object_map<mesh> m_meshes;	// will be used for instancing, multiple models that refer a single mesh
+	//name_object_map<model> m_mdls;
 
 };

@@ -66,6 +66,9 @@
     <CudaCompile Include="random.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="model.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -132,6 +135,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="random.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="model.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

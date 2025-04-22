@@ -62,6 +62,11 @@ void renderer::draw_scene(const scene& scene, const std::vector<shader>& shaders
 	m_engines[(size_t)m_engine_idx]->draw_scene(scene, shaders, dt);
 }
 
+void renderer::reset()
+{
+	((path_tracer*)m_engines[1])->reset();
+}
+
 renderer::renderer()
 	:
 	m_engine_idx(engine::PATHTRACER)
