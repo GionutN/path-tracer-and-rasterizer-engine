@@ -7,17 +7,22 @@
 class model
 {
 public:
-	model(size_t mesh_idx)
+	model(const std::string& mesh_name)
 		:
-		m_mesh_index(mesh_idx)
+		m_mesh(mesh_name)
 	{}
 
-private:
-	size_t m_mesh_index;
+	const std::string& get_mesh_name() const { return m_mesh; }
+	const iqvec& get_translation() const { return m_translation; }
+	const iqvec& get_scale() const { return m_scale; }
+	const iqmat& get_transform() const { return m_transform; }
 
-	iqmat m_translation;
-	iqmat m_rotation;
-	iqmat m_scale;
+private:
+	std::string m_mesh;
+
+	iqvec m_translation;
+	iqvec m_rotation;
+	iqvec m_scale;
 	iqmat m_transform;	// for caching
 
 };

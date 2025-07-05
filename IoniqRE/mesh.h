@@ -25,7 +25,7 @@ class mesh
 {
 public:
 	// used for different ray intersection algorithms
-	enum class type
+	enum type
 	{
 		INVALID = -1,
 		TRIANGLES,

@@ -279,7 +279,7 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 	time += dt;
 
 	// let the compute kernel run for half a second, then retrieve the computed image
-	// there is a problem here, the timer get's updated only when the currently selected engine is this one
+	// there is a problem here, the timer gets updated only when the currently selected engine is the path tracer
 	// on engine switch to this one, the kernel call must happen right away
 	if (time > 0.5f) {
 		time = 0.0f;

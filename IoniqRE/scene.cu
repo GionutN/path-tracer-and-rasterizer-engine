@@ -6,9 +6,8 @@
 #include "renderer.h"
 
 scene::scene()
-	:
-	m_model_types({0, 0})
 {
+	m_model_types.fill(0);
 }
 
 void scene::add(const mesh& m)
@@ -16,19 +15,8 @@ void scene::add(const mesh& m)
 	m_modified = true;
 
 	m_models.push_back(m);
-	m_model_types[(size_t)m.get_type()]++;
+	m_model_types[m.get_type()]++;
 
-	m_vertices += m.get_vertices().size();
-	m_indices += m.get_indices().size();
-}
-
-void scene::change(const mesh& m)
-{
-	m_modified = true;
-
-	m_vertices -= m_models[0].get_vertices().size();
-	m_indices -= m_models[0].get_indices().size();
-	m_models[0] = m;
 	m_vertices += m.get_vertices().size();
 	m_indices += m.get_indices().size();
 }
@@ -56,7 +44,7 @@ scene::gpu_packet scene::build_packet() const
 
 		// CCW sent to the gpu
 		for (const auto& i : m.get_indices()) {
-			packet.indices[index_idx++] = i + index_offset;	// weird compiler warning
+			packet.indices[index_idx++] = i + index_offset;
 		}
 		index_offset += (UINT)m.get_vertices().size();
 	}
@@ -83,4 +71,142 @@ scene::gpu_packet scene::build_packet() const
 	delete[] packet.model_types; packet.model_types = model_types;
 
 	return packet;
+}
+
+scene::gpu_packet_x scene::build_packet_x() const
+{
+	// add all the meshes' names to a vector and sort it
+	std::vector<std::string> names;
+	for (const auto& m : m_meshes) {
+		names.emplace_back(m.first);
+	}
+	std::sort(names.begin(), names.end());
+
+	m_modified = false;	// the scene is not modified while building the packet
+	gpu_packet_x pkt;
+	std::memcpy(pkt.num_drawcalls, m_model_types.data(), mesh::type::NUMTYPES * sizeof(UINT));
+
+	// the arrays will be nullptr if no draw calls or triangle meshes exist
+	pkt.tri_meshes = nullptr;
+	pkt.tri_mesh_dcs = nullptr;
+	pkt.sphere_dcs = nullptr;
+
+	// copy the data for each mesh in the meshes array
+	pkt.num_tri_meshes = m_meshes.size();
+	if (m_meshes.size() != 0) {
+		pkt.tri_meshes = new gpu_packet_x::tri_mesh[m_meshes.size()];
+		UINT idx = 0;
+		for (const auto& n : names) {
+			const mesh& m = (*m_meshes.get(n).first).second;
+
+			UINT num_indices = m.get_indices().size();
+			UINT num_vertices = m.get_vertices().size();
+
+			pkt.tri_meshes[idx].num_indices = num_indices;
+			pkt.tri_meshes[idx].num_vertices = num_vertices;
+			pkt.tri_meshes[idx].indices = new UINT[num_indices];
+			pkt.tri_meshes[idx].vertices = new vertex[num_vertices];
+
+			std::memcpy(pkt.tri_meshes[idx].indices, m.get_indices().data(), num_indices * sizeof(UINT));
+			std::memcpy(pkt.tri_meshes[idx].vertices, m.get_vertices().data(), num_vertices * sizeof(vertex));
+
+			idx++;
+		}
+	}
+
+	// initialize the drawcalls arrays
+	if (pkt.num_drawcalls[mesh::type::TRIANGLES] != 0) {
+		pkt.tri_mesh_dcs = new gpu_packet_x::tri_mesh_drawcall[pkt.num_drawcalls[mesh::type::TRIANGLES]];
+	}
+	if (pkt.num_drawcalls[mesh::type::SPHERES] != 0) {
+		pkt.sphere_dcs = new gpu_packet_x::sphere_drawcall[pkt.num_drawcalls[mesh::type::SPHERES]];
+	}
+	UINT idxs[2] = { 0, 0 };
+
+	for (const auto& m : m_models_x) {
+		// this is a binary search
+		std::vector<std::string>::iterator mesh_it = std::lower_bound(names.begin(), names.end(), m.second.get_mesh_name());
+		if (mesh_it == names.end()) {
+			// the mesh name was not found, should probably log this
+			continue;
+		}
+
+		UINT mesh_id = std::distance(mesh_it, names.begin());
+		switch ((*m_meshes.get(m.second.get_mesh_name()).first).second.get_type()) {
+		case mesh::type::TRIANGLES:
+			pkt.tri_mesh_dcs[idxs[mesh::type::TRIANGLES]].mesh_id = mesh_id;
+			pkt.tri_mesh_dcs[idxs[mesh::type::TRIANGLES]].transform = m.second.get_transform();
+			idxs[mesh::type::TRIANGLES]++;
+			break;
+		case mesh::type::SPHERES:
+			pkt.sphere_dcs[idxs[mesh::type::SPHERES]].radius = m.second.get_scale().x;
+			pkt.sphere_dcs[idxs[mesh::type::SPHERES]].center = m.second.get_translation();
+			idxs[mesh::type::SPHERES]++;
+			break;
+		}
+	}
+
+	// copy the data to the gpu
+	cudaError cderr;
+	gpu_packet_x::tri_mesh* tri_meshes = nullptr;
+	gpu_packet_x::tri_mesh_drawcall* tri_mesh_dcs = nullptr;
+	gpu_packet_x::sphere_drawcall* sphere_dcs = nullptr;
+
+	if (pkt.num_tri_meshes != 0) {
+		RENDERER_THROW_CUDA(cudaMalloc((void**)&tri_meshes, pkt.num_tri_meshes * sizeof(gpu_packet_x::tri_mesh)));
+	}
+	for (UINT i = 0; i < m_meshes.size(); i++) {
+		vertex* vertices;
+		UINT* indices;
+		tri_meshes[i].num_indices = pkt.tri_meshes[i].num_indices;
+		tri_meshes[i].num_vertices = pkt.tri_meshes[i].num_vertices;
+		RENDERER_THROW_CUDA(cudaMalloc((void**)&vertices, tri_meshes[i].num_vertices * sizeof(vertex)));
+		RENDERER_THROW_CUDA(cudaMalloc((void**)&indices, tri_meshes[i].num_indices * sizeof(UINT)));
+		RENDERER_THROW_CUDA(cudaMemcpy(vertices, pkt.tri_meshes[i].vertices, tri_meshes[i].num_vertices * sizeof(vertex), cudaMemcpyHostToDevice));
+		RENDERER_THROW_CUDA(cudaMemcpy(indices, pkt.tri_meshes[i].indices, tri_meshes[i].num_indices * sizeof(UINT), cudaMemcpyHostToDevice));
+
+		delete[] pkt.tri_meshes[i].vertices; pkt.tri_meshes[i].vertices = vertices;
+		delete[] pkt.tri_meshes[i].indices; pkt.tri_meshes[i].indices = indices;
+	}
+	if (m_meshes.size() != 0) {
+		delete[] pkt.tri_meshes; pkt.tri_meshes = tri_meshes;
+	}
+
+	if (pkt.num_drawcalls[mesh::type::TRIANGLES] != 0) {
+		RENDERER_THROW_CUDA(cudaMalloc((void**)&tri_mesh_dcs, pkt.num_drawcalls[mesh::type::TRIANGLES] * sizeof(gpu_packet_x::tri_mesh_drawcall)));
+		RENDERER_THROW_CUDA(cudaMemcpy(tri_mesh_dcs, pkt.tri_mesh_dcs, pkt.num_drawcalls[mesh::type::TRIANGLES] * sizeof(gpu_packet_x::tri_mesh_drawcall), cudaMemcpyHostToDevice));
+		delete[] pkt.tri_mesh_dcs; pkt.tri_mesh_dcs = tri_mesh_dcs;
+	}
+	if (pkt.num_drawcalls[mesh::type::SPHERES] != 0) {
+		RENDERER_THROW_CUDA(cudaMalloc((void**)&sphere_dcs, pkt.num_drawcalls[mesh::type::SPHERES] * sizeof(gpu_packet_x::sphere_drawcall)));
+		RENDERER_THROW_CUDA(cudaMemcpy(sphere_dcs, pkt.sphere_dcs, pkt.num_drawcalls[mesh::type::SPHERES] * sizeof(gpu_packet_x::sphere_drawcall), cudaMemcpyHostToDevice));
+		delete[] pkt.sphere_dcs; pkt.sphere_dcs = sphere_dcs;
+	}
+
+	return pkt;
+}
+
+void scene::free_packet_x(gpu_packet_x* pkt) const
+{
+	cudaError cderr;
+
+	if (pkt->num_drawcalls[mesh::type::TRIANGLES] != 0) {
+		RENDERER_THROW_CUDA(cudaFree(pkt->tri_mesh_dcs));
+		pkt->tri_mesh_dcs = nullptr;
+	}
+	if (pkt->num_drawcalls[mesh::type::SPHERES] != 0) {
+		RENDERER_THROW_CUDA(cudaFree(pkt->sphere_dcs));
+		pkt->sphere_dcs = nullptr;
+	}
+
+	for (UINT i = 0; i < pkt->num_tri_meshes; i++) {
+		RENDERER_THROW_CUDA(cudaFree(pkt->tri_meshes[i].vertices));
+		RENDERER_THROW_CUDA(cudaFree(pkt->tri_meshes[i].indices));
+		pkt->tri_meshes[i].vertices = nullptr;
+		pkt->tri_meshes[i].indices = nullptr;
+	}
+	if (pkt->num_tri_meshes != 0) {
+		RENDERER_THROW_CUDA(cudaFree(pkt->tri_meshes));
+		pkt->tri_meshes = nullptr;
+	}
 }

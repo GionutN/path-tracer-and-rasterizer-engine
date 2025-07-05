@@ -55,6 +55,6 @@ private:
 	size_t m_crt_frame;	// the current path-traced frame
 	scene::gpu_packet d_packet = { nullptr, nullptr, nullptr };
 	bool m_image_updated;
-	bool m_pending_reset = false;	// flag for resetting to avoid data race when clearing the buffer
+	bool m_pending_reset = false;	// flag for resetting to avoid data race when clearing the device pixel buffer
 
 };

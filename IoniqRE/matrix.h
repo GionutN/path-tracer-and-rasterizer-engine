@@ -1,7 +1,5 @@
 #pragma once
 
-//#include <cmath>
-
 #include <cuda.h>
 #include <cuda_runtime.h>
 
