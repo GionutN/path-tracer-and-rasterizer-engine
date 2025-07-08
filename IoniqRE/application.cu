@@ -16,8 +16,11 @@ application::application(const ref<window>& wnd)
 	random::init();
 	renderer::init(wnd);
 
-	meshes.add(tri());
+	scn.add(tri());
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
+
+	scn.add_mesh("quad", quad());
+	scn.add_model("model1", model("quad"));
 }
 
 application::~application()
@@ -68,7 +71,7 @@ void application::update_frame()
 
 void application::draw_frame()
 {
-	renderer::get()->draw_scene(meshes, shaders, dt);
+	renderer::get()->draw_scene(scn, shaders, dt);
 }
 
 void application::get_fps(real dt)

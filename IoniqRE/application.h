@@ -31,6 +31,6 @@ private:
 	float dt = 0.0f;
 	int frame = 0;
 
-	scene meshes;
+	scene scn;
 	std::vector<shader> shaders;
 };

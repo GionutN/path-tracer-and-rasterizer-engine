@@ -292,9 +292,7 @@ void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shad
 		m_image_updated = true;
 
 		// TODO:
-		// model class? that refers to an array of meshes and shaders, for instancing
-		// refering based on a name (giving names to meshes and materials)
-		// sphere mesh class
+		// test transforms (2 triangles in a scene)
 
 		// copy the scene data from host to device only if changed
 		if (scene.modified()) {

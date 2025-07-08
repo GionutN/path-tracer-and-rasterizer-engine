@@ -21,6 +21,91 @@ void scene::add(const mesh& m)
 	m_indices += m.get_indices().size();
 }
 
+void scene::add_mesh(const std::string& name, const mesh& m)
+{
+	auto result = m_meshes.emplace(name, m);
+	if (!result.second) {
+		// log that the insertion did not take place
+	}
+}
+
+void scene::rename_mesh(const std::string& old_name, const std::string& new_name)
+{
+	std::map<std::string, mesh>::iterator it = m_meshes.find(old_name);
+	if (it == m_meshes.end()) {
+		// the mesh does not exist
+		return;
+	}
+
+	mesh m = m_meshes[old_name];
+	m_meshes.erase(it);
+	m_meshes[new_name] = std::move(m);
+}
+
+void scene::delete_mesh(const std::string& name)
+{
+	std::map<std::string, mesh>::iterator it = m_meshes.find(name);
+	if (it == m_meshes.end()) {
+		// the mesh does not exist
+		return;
+	}
+
+	m_meshes.erase(it);
+}
+
+void scene::add_model(const std::string& name, const model& m)
+{
+	//m_modified = true;
+	auto result = m_models_x.emplace(name, m);
+	if (!result.second) {
+		// log that the insertion did not take place
+		return;
+	}
+
+	m_sorted_by_mesh_name.insert(&(*result.first).second);
+}
+
+void scene::rename_model(const std::string& old_name, const std::string& new_name)
+{
+	std::map<std::string, model>::iterator it = m_models_x.find(old_name);
+	if (it == m_models_x.end()) {
+		// the mesh does not exist
+		return;
+	}
+
+	model m = m_models_x[old_name];
+	std::set<model*, model_comparator>::iterator sorted_it = m_sorted_by_mesh_name.find(&m_models_x[old_name]);	// it must exist
+	m_sorted_by_mesh_name.erase(sorted_it);
+
+	m_models_x.erase(it);
+	this->add_model(new_name, m);
+}
+
+void scene::delete_model(const std::string& name)
+{
+	std::map<std::string, model>::iterator it = m_models_x.find(name);
+	if (it == m_models_x.end()) {
+		// the mesh does not exist
+		return;
+	}
+
+	std::set<model*, model_comparator>::iterator sorted_it = m_sorted_by_mesh_name.find(&m_models_x[name]);	// it must exist
+	m_sorted_by_mesh_name.erase(sorted_it);
+	m_models_x.erase(it);
+}
+
+void scene::change_model_mesh(const std::string& model_name, const std::string& new_mesh_name)
+{
+	// erase the entry for the old mesh name
+	std::set<model*, model_comparator>::iterator sorted_it = m_sorted_by_mesh_name.find(&m_models_x[model_name]);	// it must exist
+	m_sorted_by_mesh_name.erase(sorted_it);
+
+	// change the mesh's name and add it again
+	model& m = m_models_x[model_name];
+	m.set_mesh_name(new_mesh_name);
+	m_sorted_by_mesh_name.insert(&m);
+}
+
 scene::gpu_packet scene::build_packet() const
 {
 	m_modified = false;
@@ -75,12 +160,11 @@ scene::gpu_packet scene::build_packet() const
 
 scene::gpu_packet_x scene::build_packet_x() const
 {
-	// add all the meshes' names to a vector and sort it
+	// add all the meshes' names to a vector (already sorted)
 	std::vector<std::string> names;
 	for (const auto& m : m_meshes) {
 		names.emplace_back(m.first);
 	}
-	std::sort(names.begin(), names.end());
 
 	m_modified = false;	// the scene is not modified while building the packet
 	gpu_packet_x pkt;
@@ -97,7 +181,7 @@ scene::gpu_packet_x scene::build_packet_x() const
 		pkt.tri_meshes = new gpu_packet_x::tri_mesh[m_meshes.size()];
 		UINT idx = 0;
 		for (const auto& n : names) {
-			const mesh& m = (*m_meshes.get(n).first).second;
+			const mesh& m = m_meshes.at(n);
 
 			UINT num_indices = m.get_indices().size();
 			UINT num_vertices = m.get_vertices().size();
@@ -121,26 +205,26 @@ scene::gpu_packet_x scene::build_packet_x() const
 	if (pkt.num_drawcalls[mesh::type::SPHERES] != 0) {
 		pkt.sphere_dcs = new gpu_packet_x::sphere_drawcall[pkt.num_drawcalls[mesh::type::SPHERES]];
 	}
+
 	UINT idxs[2] = { 0, 0 };
-
-	for (const auto& m : m_models_x) {
-		// this is a binary search
-		std::vector<std::string>::iterator mesh_it = std::lower_bound(names.begin(), names.end(), m.second.get_mesh_name());
-		if (mesh_it == names.end()) {
-			// the mesh name was not found, should probably log this
-			continue;
+	UINT mesh_id = UINT32_MAX;
+	std::string last_mesh_name = "";
+	// go through the already sorted models with respect to the mesh name
+	// update the mesh id only if another mesh was found
+	for (const auto& pm : m_sorted_by_mesh_name) {
+		if (pm->get_mesh_name() != last_mesh_name) {
+			mesh_id++;
+			last_mesh_name = pm->get_mesh_name();
 		}
-
-		UINT mesh_id = std::distance(mesh_it, names.begin());
-		switch ((*m_meshes.get(m.second.get_mesh_name()).first).second.get_type()) {
+		switch (m_meshes.at(last_mesh_name).get_type()) {
 		case mesh::type::TRIANGLES:
 			pkt.tri_mesh_dcs[idxs[mesh::type::TRIANGLES]].mesh_id = mesh_id;
-			pkt.tri_mesh_dcs[idxs[mesh::type::TRIANGLES]].transform = m.second.get_transform();
+			pkt.tri_mesh_dcs[idxs[mesh::type::TRIANGLES]].transform = pm->get_transform();
 			idxs[mesh::type::TRIANGLES]++;
 			break;
 		case mesh::type::SPHERES:
-			pkt.sphere_dcs[idxs[mesh::type::SPHERES]].radius = m.second.get_scale().x;
-			pkt.sphere_dcs[idxs[mesh::type::SPHERES]].center = m.second.get_translation();
+			pkt.sphere_dcs[idxs[mesh::type::SPHERES]].radius = pm->get_scale().x;
+			pkt.sphere_dcs[idxs[mesh::type::SPHERES]].center = pm->get_translation();
 			idxs[mesh::type::SPHERES]++;
 			break;
 		}

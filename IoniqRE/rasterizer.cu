@@ -1,5 +1,7 @@
 #include "rasterizer.h"
 
+#include <set>
+
 static rasterizer* g_rasterizer = nullptr;
 
 namespace wrl = Microsoft::WRL;
@@ -118,9 +120,16 @@ void rasterizer::draw_scene(const scene& scene, const std::vector<shader>& shade
 	m_bg_shader->bind();
 	m_background->draw();
 
-	for (const auto& m : scene.meshes()) {
-		m.bind();
-		shaders[0].bind();
-		m.draw();
+	const std::set<model*, scene::model_comparator>& models = scene.get_models();	// these are the models sorted with respect to the mesh name
+	std::string last_mesh_name = "";
+	for (const auto& m : models) {
+		// if instancing is used, this allows the shared mesh to be bound only once
+		if (m->get_mesh_name() != last_mesh_name) {
+			last_mesh_name = m->get_mesh_name();
+			scene.get_mesh(last_mesh_name).bind();
+			shaders[0].bind();
+		}
+
+		scene.get_mesh(last_mesh_name).draw();
 	}
 }
