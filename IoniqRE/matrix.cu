@@ -35,25 +35,25 @@ __host__ __device__ iqvec iqmat::col_to_vec(int col) const {
 }
 
 __host__ __device__ iqmat iqmat::operator*(const iqmat& other) const {
-	return iqmat(this->row_to_vec(0).dot4(this->col_to_vec(0)),
-		this->row_to_vec(0).dot4(this->col_to_vec(1)),
-		this->row_to_vec(0).dot4(this->col_to_vec(2)),
-		this->row_to_vec(0).dot4(this->col_to_vec(3)),
+	return iqmat(this->row_to_vec(0).dot4(other.col_to_vec(0)),
+		this->row_to_vec(0).dot4(other.col_to_vec(1)),
+		this->row_to_vec(0).dot4(other.col_to_vec(2)),
+		this->row_to_vec(0).dot4(other.col_to_vec(3)),
 
-		this->row_to_vec(1).dot4(this->col_to_vec(0)),
-		this->row_to_vec(1).dot4(this->col_to_vec(1)),
-		this->row_to_vec(1).dot4(this->col_to_vec(2)),
-		this->row_to_vec(1).dot4(this->col_to_vec(3)),
-
-		this->row_to_vec(2).dot4(this->col_to_vec(0)),
-		this->row_to_vec(2).dot4(this->col_to_vec(1)),
-		this->row_to_vec(2).dot4(this->col_to_vec(2)),
-		this->row_to_vec(2).dot4(this->col_to_vec(3)),
-
-		this->row_to_vec(3).dot4(this->col_to_vec(0)),
-		this->row_to_vec(3).dot4(this->col_to_vec(1)),
-		this->row_to_vec(3).dot4(this->col_to_vec(2)),
-		this->row_to_vec(3).dot4(this->col_to_vec(3)));
+		this->row_to_vec(1).dot4(other.col_to_vec(0)),
+		this->row_to_vec(1).dot4(other.col_to_vec(1)),
+		this->row_to_vec(1).dot4(other.col_to_vec(2)),
+		this->row_to_vec(1).dot4(other.col_to_vec(3)),
+								 
+		this->row_to_vec(2).dot4(other.col_to_vec(0)),
+		this->row_to_vec(2).dot4(other.col_to_vec(1)),
+		this->row_to_vec(2).dot4(other.col_to_vec(2)),
+		this->row_to_vec(2).dot4(other.col_to_vec(3)),
+								 
+		this->row_to_vec(3).dot4(other.col_to_vec(0)),
+		this->row_to_vec(3).dot4(other.col_to_vec(1)),
+		this->row_to_vec(3).dot4(other.col_to_vec(2)),
+		this->row_to_vec(3).dot4(other.col_to_vec(3)));
 }
 __host__ __device__ iqmat& iqmat::operator*=(const iqmat& other) {
 	*this = (*this) * other;

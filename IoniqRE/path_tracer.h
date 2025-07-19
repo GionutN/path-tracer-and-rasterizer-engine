@@ -23,7 +23,7 @@ public:
 
 	void begin_frame() override;
 	void end_frame() override;
-	void draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt) override;
+	void draw_scene(const scene& scene, std::vector<shader>& shaders, float dt) override;
 
 	__device__ static iqvec ray_color(const ray& r, scene::gpu_packet packet);
 

@@ -33,4 +33,6 @@ private:
 
 	scene scn;
 	std::vector<shader> shaders;
+
+	float radians = 0.0f;
 };

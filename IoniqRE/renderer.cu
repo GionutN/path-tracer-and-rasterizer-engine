@@ -57,7 +57,7 @@ void renderer::end_frame()
 	m_engines[(size_t)m_engine_idx]->end_frame();
 }
 
-void renderer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
+void renderer::draw_scene(const scene& scene, std::vector<shader>& shaders, float dt)
 {
 	m_engines[(size_t)m_engine_idx]->draw_scene(scene, shaders, dt);
 }

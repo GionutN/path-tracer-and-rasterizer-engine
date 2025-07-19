@@ -271,7 +271,7 @@ __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, U
 	fb[pixelid].a = p.a;
 }
 
-void path_tracer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
+void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, float dt)
 {
 	cudaError cderr;
 

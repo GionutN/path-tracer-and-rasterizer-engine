@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "iqmath.h"
+
 class shader
 {
 public:
@@ -14,10 +16,14 @@ public:
 	~shader() = default;
 
 	void bind() const;
+	void update_transform(const iqmat& tr);
 
 private:
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vshader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> m_pshader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_layout;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_transform_cbuffer;
+
+	iqmat m_transform = 1.0f;
 
 };

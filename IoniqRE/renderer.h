@@ -27,7 +27,7 @@ public:
 
 	void begin_frame() override;
 	void end_frame() override ;
-	void draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt) override;
+	void draw_scene(const scene& scene, std::vector<shader>& shaders, float dt) override;
 
 	void toggle_engine() { m_new_engine = (engine)(((int)m_new_engine + 1) % 2); }
 

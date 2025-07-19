@@ -114,12 +114,13 @@ void rasterizer::end_frame()
 	}
 }
 
-void rasterizer::draw_scene(const scene& scene, const std::vector<shader>& shaders, float dt)
+void rasterizer::draw_scene(const scene& scene, std::vector<shader>& shaders, float dt)
 {
 	m_background->bind();
 	m_bg_shader->bind();
 	m_background->draw();
 
+	// TODO: apply transformations
 	const std::set<model*, scene::model_comparator>& models = scene.get_models();	// these are the models sorted with respect to the mesh name
 	std::string last_mesh_name = "";
 	for (const auto& m : models) {
@@ -127,9 +128,10 @@ void rasterizer::draw_scene(const scene& scene, const std::vector<shader>& shade
 		if (m->get_mesh_name() != last_mesh_name) {
 			last_mesh_name = m->get_mesh_name();
 			scene.get_mesh(last_mesh_name).bind();
-			shaders[0].bind();
 		}
 
+		shaders[0].update_transform(m->get_transform());
+		shaders[0].bind();
 		scene.get_mesh(last_mesh_name).draw();
 	}
 }

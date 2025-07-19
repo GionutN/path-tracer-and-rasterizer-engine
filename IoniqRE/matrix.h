@@ -44,10 +44,13 @@ public:
 
 	__host__ __device__ static iqmat scale(const iqvec& factor);
 	__host__ __device__ static iqmat translate(const iqvec& offset);
-	__host__ __device__ static iqmat rotation_x(float angle);
-	__host__ __device__ static iqmat rotation_y(float angle);
-	__host__ __device__ static iqmat rotation_z(float angle);
-	__host__ __device__ static iqmat rotation(float angle, const iqvec& axis);
+	__host__ __device__ static iqmat rotation_x(float radians);
+	__host__ __device__ static iqmat rotation_y(float radians);
+	__host__ __device__ static iqmat rotation_z(float radians);
+	__host__ __device__ static iqmat rotation(float radians, const iqvec& axis);
+	// add a function that returns a rotation around an axis given a vector with degrees around x y and z
+
+	float* data() { return &m[0][0]; }
 
 public:
 	float m[4][4];

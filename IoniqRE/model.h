@@ -20,8 +20,13 @@ public:
 	const iqvec& get_scale() const { return m_scale; }
 	const iqmat& get_transform() const { return m_transform; }
 
+	void set_rotation(const iqvec& rot) { m_rotation = rot; this->recompute_transform(); }
+	void set_scale(const iqvec& s) { m_scale = s; this->recompute_transform(); }
+	void set_transforms(const iqvec& scale = 1.0f, const iqvec& rotation = 0.0f, const iqvec& translation = 0.0f);
+
 private:
 	void set_mesh_name(const std::string& name) { m_mesh = name; }
+	void recompute_transform();
 
 private:
 	std::string m_mesh;
