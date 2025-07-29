@@ -62,7 +62,8 @@ void scene::add_model(const std::string& name, const model& m)
 		return;
 	}
 
-	m_sorted_by_mesh_name.insert(&(*result.first).second);
+	model* addr = &((*result.first).second);
+	m_sorted_by_mesh_name.insert(addr);
 }
 
 void scene::rename_model(const std::string& old_name, const std::string& new_name)

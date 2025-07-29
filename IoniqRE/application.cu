@@ -19,15 +19,12 @@ application::application(const ref<window>& wnd)
 	scn.add(tri());
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 
-	scn.add_mesh("quad", quad());
-	scn.add_model("model1", model("quad"));
+	scn.add_mesh("tri", tri());
+	scn.add_model("st", model("tri"));
+	scn.add_model("dr", model("tri"));
 
-	iqmat s = iqmat::scale(iqvec(0.5f, 1.0f, 1.0f, 1.0f));
-	iqmat r = iqmat::rotation_z(pi_div_2);
-	iqmat t = iqmat::translate(iqvec(1.0f, 0.0f, 0.0f, 0.0f));
-
-	iqmat result = s * r * t;
-	result.transpose();
+	scn.get_model("st").set_transforms(1.0f, iqvec(0.0f, 0.0f, pi, 0.0f), iqvec(-0.5f, 0.0f, 0.0f, 0.0f));
+	scn.get_model("dr").set_transforms(1.0f, 0.0f, iqvec(0.5f, 0.0f, 0.0f, 0.0f));
 }
 
 application::~application()
@@ -74,10 +71,6 @@ void application::update_frame()
 	if (mouse::get()->button_is_pressed(mouse::button_codes::RIGHT)) {
 		renderer::get()->reset();
 	}
-
-	radians += dt;
-	radians = std::fmodf(radians, tau);
-	scn.get_model("model1").set_transforms(iqvec(1.0f, 1.0f, 1.0f, 1.0f), iqvec(0.0f, 0.0f, radians, 0.0f), iqvec(0.5f, -0.5f, 0.0f, 0.0f));
 }
 
 void application::draw_frame()

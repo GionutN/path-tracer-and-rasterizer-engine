@@ -54,7 +54,10 @@ public:
 	struct model_comparator
 	{
 		bool operator()(const model* a, const model* b) const {
-			return a->get_mesh_name() < b->get_mesh_name();
+			if (a->get_mesh_name() != b->get_mesh_name()) {
+				return a->get_mesh_name() < b->get_mesh_name();
+			}
+			return a < b;
 		}
 	};
 
