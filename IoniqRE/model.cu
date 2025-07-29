@@ -1,5 +1,8 @@
 #include "model.h"
 
+#include <DirectXMath.h>
+namespace dx = DirectX;
+
 void model::set_transforms(const iqvec& scale, const iqvec& rotation, const iqvec& translation)
 {
 	m_scale = scale;
@@ -10,11 +13,9 @@ void model::set_transforms(const iqvec& scale, const iqvec& rotation, const iqve
 
 void model::recompute_transform()
 {
-	// for direct3d, the order is  scale*rotation*translation
-	// but for iqmat, the order is reversed
+	// for direct3d and iqmat the order is  scale*rotation*translation
 	iqmat s = iqmat::scale(m_scale);
 	iqmat r = iqmat::rotation_z(m_rotation.z);
 	iqmat t = iqmat::translate(m_translation);
 	m_transform = s * r * t;
-	//m_transform = t * r * s;
 }

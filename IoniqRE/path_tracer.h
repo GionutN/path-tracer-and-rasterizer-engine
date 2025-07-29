@@ -52,7 +52,7 @@ private:
 
 	pixel* m_host_pixel_buffer;
 	pixel* m_dev_pixel_buffer;	// ever-converging
-	size_t m_crt_frame;	// the current path-traced frame
+	size_t m_crt_frame;	// the current traced frame
 	scene::gpu_packet d_packet = { nullptr, nullptr, nullptr };
 	bool m_image_updated;
 	bool m_pending_reset = false;	// flag for resetting to avoid data race when clearing the device pixel buffer

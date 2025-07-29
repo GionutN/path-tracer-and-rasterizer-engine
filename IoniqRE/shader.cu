@@ -41,8 +41,7 @@ void shader::bind() const
 void shader::update_transform(const iqmat& tr)
 {
 	HRESULT hr;
-	//m_transform = tr.transposed();
-	m_transform = tr;
+	m_transform = tr.transposed();
 
 	D3D11_MAPPED_SUBRESOURCE mapped;
 	RENDERER_THROW_FAILED(RENDERER_CTX->Map(m_transform_cbuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped));

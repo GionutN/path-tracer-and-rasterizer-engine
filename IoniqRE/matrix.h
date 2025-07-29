@@ -5,6 +5,7 @@
 
 class iqvec;
 
+// hlsl compatible (column major matrix class)
 class iqmat
 {
 public:
@@ -48,9 +49,9 @@ public:
 	__host__ __device__ static iqmat rotation_y(float radians);
 	__host__ __device__ static iqmat rotation_z(float radians);
 	__host__ __device__ static iqmat rotation(float radians, const iqvec& axis);
-	// add a function that returns a rotation around an axis given a vector with degrees around x y and z
 
 	float* data() { return &m[0][0]; }
+	const float* data() const { return &m[0][0]; }
 
 public:
 	float m[4][4];

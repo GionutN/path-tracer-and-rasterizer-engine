@@ -21,6 +21,13 @@ application::application(const ref<window>& wnd)
 
 	scn.add_mesh("quad", quad());
 	scn.add_model("model1", model("quad"));
+
+	iqmat s = iqmat::scale(iqvec(0.5f, 1.0f, 1.0f, 1.0f));
+	iqmat r = iqmat::rotation_z(pi_div_2);
+	iqmat t = iqmat::translate(iqvec(1.0f, 0.0f, 0.0f, 0.0f));
+
+	iqmat result = s * r * t;
+	result.transpose();
 }
 
 application::~application()
@@ -70,8 +77,7 @@ void application::update_frame()
 
 	radians += dt;
 	radians = std::fmodf(radians, tau);
-	scn.get_model("model1").set_rotation(iqvec(0.0f, 0.0f, radians, 0.0f));
-	scn.get_model("model1").set_scale(iqvec(0.5625f, 1.0f, 1.0f, 1.0f));
+	scn.get_model("model1").set_transforms(iqvec(1.0f, 1.0f, 1.0f, 1.0f), iqvec(0.0f, 0.0f, radians, 0.0f), iqvec(0.5f, -0.5f, 0.0f, 0.0f));
 }
 
 void application::draw_frame()

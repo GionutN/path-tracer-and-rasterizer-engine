@@ -4,7 +4,7 @@ struct vs_out
 	float4 pos : SV_POSITION;
 };
 
-vs_out main(float2 pos : POSITION)
+vs_out main(float3 pos : POSITION)
 {
 	vs_out vs;
 	pos *= 2.0;
