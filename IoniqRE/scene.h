@@ -20,15 +20,8 @@ public:
 	// represents the structure that needs to be sent to the gpu for rendering
 	struct gpu_packet
 	{
-		vertex* vertices;
-		UINT* indices;
-		UINT* model_types;
-	};
-
-	struct gpu_packet_x
-	{
-		UINT num_drawcalls[mesh::type::NUMTYPES];
-		UINT num_tri_meshes;
+		UINT num_drawcalls[mesh::type::NUMTYPES] = {};
+		UINT num_tri_meshes = 0;
 
 		struct tri_mesh {
 			vertex* vertices;
@@ -57,6 +50,8 @@ public:
 			if (a->get_mesh_name() != b->get_mesh_name()) {
 				return a->get_mesh_name() < b->get_mesh_name();
 			}
+
+			// tie braker to allow models with the same name
 			return a < b;
 		}
 	};
@@ -64,7 +59,6 @@ public:
 public:
 	scene();
 
-	const std::vector<mesh>& meshes() const { return m_models; }
 	const std::set<model*, model_comparator>& get_models() const { return m_sorted_by_mesh_name; }
 
 	void add(const mesh& m);
@@ -84,15 +78,11 @@ public:
 	inline bool modified() const { return m_modified; }
 
 	gpu_packet build_packet() const;
-	gpu_packet_x build_packet_x() const;
-	void free_packet_x(gpu_packet_x* pkt) const;
+	void free_packet(gpu_packet* pkt) const;
 
 private:
-	std::vector<mesh> m_models;
 	std::array<UINT, mesh::type::NUMTYPES> m_model_types;
 
-	size_t m_vertices = 0;	// total number of vertices
-	size_t m_indices = 0;	// total number of indices
 	mutable bool m_modified = true;	// if the scene changes, update the gpu packet
 
 	// new scene data members

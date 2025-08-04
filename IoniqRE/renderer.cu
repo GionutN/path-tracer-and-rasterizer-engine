@@ -69,8 +69,8 @@ void renderer::reset()
 
 renderer::renderer()
 	:
-	//m_engine_idx(engine::PATHTRACER)
-	m_engine_idx(engine::RASTERIZER)
+	m_engine_idx(engine::PATHTRACER)
+	//m_engine_idx(engine::RASTERIZER)
 {
 	m_new_engine = m_engine_idx;
 	m_engines[0] = rasterizer::get();

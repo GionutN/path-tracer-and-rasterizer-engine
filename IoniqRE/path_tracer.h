@@ -25,6 +25,7 @@ public:
 	void end_frame() override;
 	void draw_scene(const scene& scene, std::vector<shader>& shaders, float dt) override;
 
+	//__device__ static iqvec ray_color(const ray& r, scene::gpu_packet packet);
 	__device__ static iqvec ray_color(const ray& r, scene::gpu_packet packet);
 
 	inline void reset() { m_pending_reset = true; }
@@ -51,9 +52,9 @@ private:
 	curandState* m_dev_rand_state;
 
 	pixel* m_host_pixel_buffer;
-	pixel* m_dev_pixel_buffer;	// ever-converging
+	pixel* m_dev_pixel_buffer;	// ever-converging, should set a limit
 	size_t m_crt_frame;	// the current traced frame
-	scene::gpu_packet d_packet = { nullptr, nullptr, nullptr };
+	scene::gpu_packet d_packet;
 	bool m_image_updated;
 	bool m_pending_reset = false;	// flag for resetting to avoid data race when clearing the device pixel buffer
 

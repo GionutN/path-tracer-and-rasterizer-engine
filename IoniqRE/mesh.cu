@@ -2,11 +2,10 @@
 
 #include "renderer.h"
 
-mesh::mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids, type t)
+mesh::mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids)
 	:
 	m_vertices(verts),
-	m_indices(ids),
-	m_mesh_type(t)
+	m_indices(ids)
 {
 	this->setup_mesh();
 }

@@ -367,7 +367,8 @@ public:
 		return result;
 	}
 
-	__host__ __device__ iqvec transformed(const iqmat& mat, usage type) const {
+	// default parameter does not change before the operation the w component of the vector
+	__host__ __device__ iqvec transformed(const iqmat& mat, usage type = iqvec::usage::MISCELLANEOUS) const {
 		iqvec aux = *this, result;
 		switch (type) {
 		case usage::POINT: aux.w = 1.0f; break;
@@ -380,7 +381,8 @@ public:
 		result.w = aux.dot4(mat.col_to_vec(3));
 		return result;
 	}
-	__host__ __device__ iqvec& transform(const iqmat& mat, usage type) {
+	// default parameter does not change before the operation the w component of the vector
+	__host__ __device__ iqvec& transform(const iqmat& mat, usage type = iqvec::usage::MISCELLANEOUS) {
 		*this = this->transformed(mat, type);
 		return *this;
 	}

@@ -3,6 +3,7 @@
 #include <string>
 
 #include "iqmath.h"
+#include "mesh.h"
 
 class model
 {
@@ -13,7 +14,8 @@ public:
 	model(const std::string& mesh_name)
 		:
 		m_mesh(mesh_name)
-	{}
+	{
+	}
 
 	const std::string& get_mesh_name() const { return m_mesh; }
 	const iqvec& get_translation() const { return m_translation; }
@@ -29,7 +31,7 @@ private:
 	void recompute_transform();
 
 private:
-	std::string m_mesh;
+	std::string m_mesh = "default";
 
 	iqvec m_translation = 0.0f;
 	iqvec m_rotation = 0.0f;

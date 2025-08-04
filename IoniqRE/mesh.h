@@ -34,13 +34,13 @@ public:
 	};
 
 public:
-	mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids, type t = type::TRIANGLES);
+	mesh(const std::vector<vertex>& verts, const std::vector<UINT>& ids);
 	mesh(type t = type::TRIANGLES);
 	virtual ~mesh();
 
-	inline type get_type() const { return m_mesh_type; }
 	inline const std::vector<vertex>& get_vertices() const { return m_vertices; }
 	inline const std::vector<UINT>& get_indices()    const { return m_indices; }
+	inline type get_type() const { return m_mesh_type; }
 
 	void bind() const;
 	void draw() const;

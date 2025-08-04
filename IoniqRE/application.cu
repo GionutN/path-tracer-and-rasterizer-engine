@@ -16,14 +16,16 @@ application::application(const ref<window>& wnd)
 	random::init();
 	renderer::init(wnd);
 
-	scn.add(tri());
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 
+	scn.add_mesh("default", tri());
 	scn.add_mesh("tri", tri());
-	scn.add_model("st", model("tri"));
-	scn.add_model("dr", model("tri"));
+	scn.add_mesh("quad", quad());
 
+	scn.add_model("st", model("tri"));
 	scn.get_model("st").set_transforms(1.0f, iqvec(0.0f, 0.0f, pi, 0.0f), iqvec(-0.5f, 0.0f, 0.0f, 0.0f));
+
+	scn.add_model("dr", model("quad"));
 	scn.get_model("dr").set_transforms(1.0f, 0.0f, iqvec(0.5f, 0.0f, 0.0f, 0.0f));
 }
 

@@ -1,8 +1,5 @@
 #include "model.h"
 
-#include <DirectXMath.h>
-namespace dx = DirectX;
-
 void model::set_transforms(const iqvec& scale, const iqvec& rotation, const iqvec& translation)
 {
 	m_scale = scale;

@@ -85,6 +85,7 @@ path_tracer::path_tracer()
 	RENDERER_THROW_FAILED(D3DReadFileToBlob(L"PTVertexShader.cso", &blob));
 	RENDERER_THROW_FAILED(rnd_base->device()->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_vertex_shader));
 
+	// build the quad used as the canvas
 	D3D11_INPUT_ELEMENT_DESC vertex_layout[2] = {
 		{"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA},
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 8, D3D11_INPUT_PER_VERTEX_DATA}
@@ -201,19 +202,25 @@ void path_tracer::end_frame()
 
 __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 {
-	if (packet.vertices != nullptr) {
-		for (UINT i = 0; i < packet.indices[0]; i += 3) {
+	for (UINT i = 0; i < packet.num_drawcalls[mesh::type::TRIANGLES]; i++) {
+		const UINT mesh_id = packet.tri_mesh_dcs[i].mesh_id;
+		const iqmat transform = packet.tri_mesh_dcs[i].transform;
+
+		const scene::gpu_packet::tri_mesh m = packet.tri_meshes[mesh_id];
+		for (UINT j = 0; j < m.num_indices; j += 3) {
 			// rebuild in CW order
-			iqvec v0 = iqvec::load(packet.vertices[packet.indices[i + 3]].pos, iqvec::usage::POINT);
-			iqvec v1 = iqvec::load(packet.vertices[packet.indices[i + 2]].pos, iqvec::usage::POINT);
-			iqvec v2 = iqvec::load(packet.vertices[packet.indices[i + 1]].pos, iqvec::usage::POINT);
+			iqvec v0 = iqvec::load(m.vertices[m.indices[j + 2]].pos, iqvec::usage::POINT).transform(transform);
+			iqvec v1 = iqvec::load(m.vertices[m.indices[j + 1]].pos, iqvec::usage::POINT).transform(transform);
+			iqvec v2 = iqvec::load(m.vertices[m.indices[j + 0]].pos, iqvec::usage::POINT).transform(transform);
 
 			triangle tr(v0, v1, v2);
 			if (tr.intersect(r)) {
-				return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+				return iqvec(1.0f, 0.0f, 1.0f, 0.0f);
 			}
 		}
 	}
+
+	// TODO: add here intersection intersection checks for other shape primitives
 
 	iqvec dir = r.direction().normalize3();
 	const float t = (dir.y + 1.0f) * 0.5f;
@@ -291,16 +298,9 @@ void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, f
 		RENDERER_THROW_CUDA(cudaMemcpy(m_host_pixel_buffer, m_dev_pixel_buffer, m_fbsize, cudaMemcpyDeviceToHost));
 		m_image_updated = true;
 
-		// TODO:
-		// test transforms (2 triangles in a scene)
-
 		// copy the scene data from host to device only if changed
 		if (scene.modified()) {
-			if (d_packet.vertices != nullptr) {
-				RENDERER_THROW_CUDA(cudaFree(d_packet.vertices));
-				RENDERER_THROW_CUDA(cudaFree(d_packet.indices));
-				RENDERER_THROW_CUDA(cudaFree(d_packet.model_types));
-			}
+			scene.free_packet(&d_packet);
 			d_packet = scene.build_packet();
 		}
 		// reset the buffer when the kernel is not running
@@ -310,6 +310,6 @@ void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, f
 			m_pending_reset = false;
 		}
 		m_crt_frame++;
-		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>>(m_dev_pixel_buffer, m_crt_frame, window::width, window::height, d_packet, m_dev_rand_state);
+		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>> (m_dev_pixel_buffer, m_crt_frame, window::width, window::height, d_packet, m_dev_rand_state);
 	}
 }
