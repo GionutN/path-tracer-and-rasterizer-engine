@@ -40,8 +40,8 @@ public:
 	__host__ __device__ bool is_nan() const;
 
 	__host__ __device__ static iqmat look_at(const iqvec& eye, const iqvec& focus);
-	__host__ __device__ static iqmat orthographic(float width, float height, float near, float far);
-	__host__ __device__ static iqmat perspective(float aspect_ratio, float fovh, float near, float far);
+	__host__ __device__ static iqmat orthographic(float aspect_ratio, float znear, float zfar);
+	__host__ __device__ static iqmat perspective(float aspect_ratio, float fovh, float znear, float zfar);
 
 	__host__ __device__ static iqmat scale(const iqvec& factor);
 	__host__ __device__ static iqmat translate(const iqvec& offset);

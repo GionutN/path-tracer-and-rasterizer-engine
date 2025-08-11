@@ -10,7 +10,8 @@
 
 application::application(const ref<window>& wnd)
 	:
-	m_wnd(wnd)
+	m_wnd(wnd),
+	cam(wnd->width, wnd->height)
 {
 	timer::init();
 	random::init();
@@ -19,14 +20,17 @@ application::application(const ref<window>& wnd)
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 
 	scn.add_mesh("default", tri());
-	scn.add_mesh("tri", tri());
-	scn.add_mesh("quad", quad());
+	scn.add_mesh("cube", cube());
 
-	scn.add_model("st", model("tri"));
-	scn.get_model("st").set_transforms(1.0f, iqvec(0.0f, 0.0f, pi, 0.0f), iqvec(-0.5f, 0.0f, 0.0f, 0.0f));
+	scn.add_model("main", model("cube"));
+	scn.get_model("main").set_transforms(1.0f, iqvec(pi_div_4, 0.0f, 0.0f, 0.0f), iqvec(0.0f, 0.0f, 10.0f, 0.0f));
 
-	scn.add_model("dr", model("quad"));
-	scn.get_model("dr").set_transforms(1.0f, 0.0f, iqvec(0.5f, 0.0f, 0.0f, 0.0f));
+	// TODO: add a camera
+	// add cube and sphere meshes for visualizing perspective for the camera
+	// first for the rasterizer, then for the path tracer
+	// add the depth stencil buffer
+
+	shaders[0].update_view_proj(cam.get_view(), cam.get_projection());
 }
 
 application::~application()
@@ -73,6 +77,10 @@ void application::update_frame()
 	if (mouse::get()->button_is_pressed(mouse::button_codes::RIGHT)) {
 		renderer::get()->reset();
 	}
+
+	//radians += dt;
+	//radians = std::fmodf(radians, tau);
+	//scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
 }
 
 void application::draw_frame()

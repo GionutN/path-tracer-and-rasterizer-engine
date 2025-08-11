@@ -1,6 +1,8 @@
 cbuffer transform_cbuff
 {
-	matrix transform;
+	matrix model;
+	matrix view;
+	matrix projection;
 };
 
 struct vs_out
@@ -12,7 +14,8 @@ struct vs_out
 vs_out main(float3 pos : POSITION)
 {
 	vs_out vs;
-	vs.pos = mul(float4(pos.x, pos.y, 0.0, 1.0), transform);
-	vs.pos.x *= 0.5625;	// cheap aspect ratio correction fix
+	vs.pos = mul(float4(pos, 1.0), model);
+	vs.pos = mul(vs.pos, view);
+	vs.pos = mul(vs.pos, projection);
 	return vs;
 }

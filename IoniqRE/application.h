@@ -7,6 +7,7 @@
 #include "mesh.h"
 #include "shader.h"
 #include "scene.h"
+#include "camera.h"
 
 class application
 {
@@ -27,10 +28,13 @@ private:
 private:
 	// use shared ptr instead of unique because it can not be instantiated from the ptr in main
 	ref<window> m_wnd;
+	camera cam;
 	real title_time = 0.0f;
 	float dt = 0.0f;
 	int frame = 0;
 
 	scene scn;
 	std::vector<shader> shaders;
+
+	float radians = 0.0f;
 };

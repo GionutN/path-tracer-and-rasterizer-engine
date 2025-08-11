@@ -289,45 +289,45 @@ __host__ __device__ bool iqmat::is_nan() const {
 
 __host__ __device__ iqmat iqmat::look_at(const iqvec& eye, const iqvec& focus) {
 	const iqvec aux = iqvec(0.0f, 1.0f, 0.0f, 0.0f);
-	iqvec forward = (eye - focus).normalize3();
+	iqvec forward = (focus - eye).normalize3();
 	iqvec right = aux.cross3(forward);
 	iqvec up = forward.cross3(right);
-	return iqmat(right.x, right.y, right.z, 0.0f,
-		up.x, up.y, up.z, 0.0f,
-		forward.x, forward.y, forward.z, 0.0f,
-		eye.x, eye.y, eye.z, 1.0f);
+	return iqmat(right.x,		   up.x,          forward.x,          0.0f,
+				 right.y,		   up.y,          forward.y,          0.0f,
+				 right.z,		   up.z,          forward.z,          0.0f,
+				-right.dot3(eye), -up.dot3(eye), -forward.dot3(eye),  1.0f);
 }
-__host__ __device__ iqmat iqmat::orthographic(float width, float height, float near, float far) {
-	if (near < 0.0f || far < 0.0f || fabsf(near - far) < 0.00001f) {
+__host__ __device__ iqmat iqmat::orthographic(float aspect_ratio, float znear, float zfar) {
+	if (znear < 0.0f || zfar < 0.0f || fabsf(znear - zfar) < 0.00001f) {
 		return iqmat(INFINITY);
 	}
 
+	float height = 2.0f;					// visible units top to bottom
+	float width = aspect_ratio * height;	// visible units left to right
+
 	iqmat result(0.0f);
-	result.m[0][0] = 2 / width;
-	result.m[1][1] = 2 / height;
-	result.m[2][2] = 2 / (far - near);
+	result.m[0][0] = 2.0f / width;
+	result.m[1][1] = 2.0f / height;
+	result.m[2][2] = 1.0f / (zfar - znear);
 	result.m[3][3] = 1.0f;
-	result.m[3][2] = (near + far) / (near - far);
+
+	result.m[3][2] = znear / (znear - zfar);
 	return result;
 }
-__host__ __device__ iqmat iqmat::perspective(float aspect_ratio, float fovh, float near, float far) {
-	if (near < 0.0f || far < 0.0f || fabsf(near - far) < 0.00001f) {
+__host__ __device__ iqmat iqmat::perspective(float aspect_ratio, float fovh, float znear, float zfar) {
+	if (znear < 0.0f || zfar < 0.0f || fabsf(znear - zfar) < 0.00001f) {
 		return iqmat(INFINITY);
 	}
 
-	const float top = tanf(fovh / 2) * near;
-	const float bottom = -top;
-	const float right = top * aspect_ratio;
-	const float left = -right;
+	const float y_scale = 1.0f / std::tanf(fovh * 0.5);
+	const float x_scale = y_scale / aspect_ratio;
 
 	iqmat result(0.0f);
-	result.m[0][0] = 2 * near / (right - left);
-	result.m[1][1] = 2 * near / (top - bottom);
-	result.m[2][0] = (right + left) / (right - left);
-	result.m[2][1] = (top + bottom) / (top - bottom);
-	result.m[2][2] = (near + far) / (near - far);
-	result.m[2][3] = -1.0f;
-	result.m[3][2] = 2 * near * far / (near - far);
+	result.m[0][0] = x_scale;
+	result.m[1][1] = y_scale;
+	result.m[2][2] = zfar / (zfar - znear);
+	result.m[2][3] = 1.0f;
+	result.m[3][2] = -znear * zfar / (zfar - znear);
 	return result;
 }
 

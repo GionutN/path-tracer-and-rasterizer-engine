@@ -208,10 +208,10 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 
 		const scene::gpu_packet::tri_mesh m = packet.tri_meshes[mesh_id];
 		for (UINT j = 0; j < m.num_indices; j += 3) {
-			// rebuild in CW order
-			iqvec v0 = iqvec::load(m.vertices[m.indices[j + 2]].pos, iqvec::usage::POINT).transform(transform);
+			// in CW order
+			iqvec v0 = iqvec::load(m.vertices[m.indices[j + 0]].pos, iqvec::usage::POINT).transform(transform);
 			iqvec v1 = iqvec::load(m.vertices[m.indices[j + 1]].pos, iqvec::usage::POINT).transform(transform);
-			iqvec v2 = iqvec::load(m.vertices[m.indices[j + 0]].pos, iqvec::usage::POINT).transform(transform);
+			iqvec v2 = iqvec::load(m.vertices[m.indices[j + 2]].pos, iqvec::usage::POINT).transform(transform);
 
 			triangle tr(v0, v1, v2);
 			if (tr.intersect(r)) {
@@ -249,7 +249,7 @@ __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, U
 	iqvec pixel00 = topleft + 0.5f * (du + dv);
 
 	iqvec path_color;
-	int samples = 8;
+	int samples = 1;
 	for (int i = 0; i < samples; i++) {
 		// a pixel has width and height 1, so from its center add an offset of (-0.5; 0.5)
 		iqvec crt_pixel = pixel00 + (x + random::real(local_state, -0.5f, 0.5f)) * du + (y + random::real(local_state, -0.5f, 0.5f)) * dv;

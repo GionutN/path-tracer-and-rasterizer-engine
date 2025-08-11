@@ -87,6 +87,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <CudaCompile Include="application.cu" />
+    <CudaCompile Include="camera.cu" />
     <CudaCompile Include="ioniq_exception.cu" />
     <CudaCompile Include="Keyboard.cu" />
     <CudaCompile Include="main.cu" />
@@ -108,6 +109,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="application.h" />
+    <ClInclude Include="camera.h" />
     <ClInclude Include="core.h" />
     <ClInclude Include="ioniq_exception.h" />
     <ClInclude Include="ioniq_windows.h" />

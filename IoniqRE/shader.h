@@ -11,12 +11,21 @@
 class shader
 {
 public:
+	struct cbuffer
+	{
+		iqmat model;
+		iqmat view;
+		iqmat projection;
+	};
+
+public:
 	shader(const std::wstring& vertex_path, const std::wstring& pixel_path);
 	shader() = default;
 	~shader() = default;
 
 	void bind() const;
 	void update_transform(const iqmat& tr);
+	void update_view_proj(const iqmat& view, const iqmat& proj);
 
 private:
 	Microsoft::WRL::ComPtr<ID3D11VertexShader> m_vshader;
@@ -24,6 +33,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_layout;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_transform_cbuffer;
 
-	iqmat m_transform = 1.0f;
+	cbuffer cb = { 1.0f, 1.0f, 1.0f };
 
 };

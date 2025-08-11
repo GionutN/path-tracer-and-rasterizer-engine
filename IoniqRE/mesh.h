@@ -76,3 +76,9 @@ class reg_polygon : public mesh
 public:
 	reg_polygon(UINT vertices);
 };
+
+class cube : public mesh
+{
+public:
+	cube();
+};
