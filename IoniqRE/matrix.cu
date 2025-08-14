@@ -319,7 +319,7 @@ __host__ __device__ iqmat iqmat::perspective(float aspect_ratio, float fovh, flo
 		return iqmat(INFINITY);
 	}
 
-	const float y_scale = 1.0f / std::tanf(fovh * 0.5);
+	const float y_scale = 1.0f / tanf(fovh * 0.5);
 	const float x_scale = y_scale / aspect_ratio;
 
 	iqmat result(0.0f);
@@ -352,7 +352,7 @@ __host__ __device__ iqmat iqmat::rotation_x(float angle) {
 
 	result.m[1][1] = c;
 	result.m[1][2] = s;
-	result.m[2][2] = -s;
+	result.m[2][1] = -s;
 	result.m[2][2] = c;
 	return result;
 }

@@ -21,12 +21,12 @@ application::application(const ref<window>& wnd)
 
 	scn.add_mesh("default", tri());
 	scn.add_mesh("cube", cube());
+	scn.add_mesh("sphere", uv_sphere());
 
 	scn.add_model("main", model("cube"));
-	scn.get_model("main").set_transforms(1.0f, iqvec(0.0f, pi_div_4, 0.0f, 0.0f), iqvec(0.0f, 0.0f, 1.0f, 0.0f));
+	//scn.get_model("main").set_transforms(1.0f, iqvec(0.0f, 0.0f, 0.0f, 0.0f), iqvec(0.0f, 0.0f, 1.0f, 0.0f));
 
-	// TODO: add a camera
-	// add sphere mesh for visualizing perspective for the camera
+	// TODO:
 	// first for the rasterizer, then for the path tracer
 	// add phong lighting
 	// add the depth stencil buffer

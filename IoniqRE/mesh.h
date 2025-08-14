@@ -82,3 +82,9 @@ class cube : public mesh
 public:
 	cube();
 };
+
+class uv_sphere : public mesh
+{
+public:
+	uv_sphere(UINT segments = 32, UINT rings = 16);
+};

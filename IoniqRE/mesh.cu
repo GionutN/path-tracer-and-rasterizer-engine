@@ -154,3 +154,93 @@ cube::cube()
 
 	this->setup_mesh();
 }
+
+// TODO:
+// check if the mesh is correct under lighting
+uv_sphere::uv_sphere(UINT segments, UINT rings)
+{
+	// y = sin(theta)
+	// x = cos(theta) * cos(phi)
+	// z = cos(theta) * sin(phi)
+
+
+	// segments is the number of vertices in the xOy plane
+	// rings is the number of segments along the z axis (rings + 1 vertices in the z axis direction)
+	segments = segments > 2 ? segments : 3;
+	rings = rings > 2 ? rings : 3;
+
+	const float theta = pi / rings;		// polar angle
+	const float phi = tau / segments;	// azimuthal angle
+
+	const iqvec bottom(0.0f, -1.0f, 0.0f, 1.0f);
+	const iqvec top(0.0f, 1.0f, 0.0f, 1.0f);
+	const iqmat polar_tr = iqmat::rotation_z(theta);
+	const iqmat azimuthal_tr = iqmat::rotation_y(phi);
+
+	// build the sphere bottom -> top (-y to +y)
+	iqvec crt_polar = bottom;
+	for (UINT i = 1; i < rings; i++) {
+		crt_polar.transform(polar_tr, iqvec::usage::POINT);
+		m_vertices.emplace_back(crt_polar.store3());
+
+		// at each ring, rotate around the y axis to get all the segments
+		iqvec crt_azimuthal = crt_polar;
+		for (UINT j = 1; j < segments; j++) {
+			crt_azimuthal.transform(azimuthal_tr, iqvec::usage::POINT);
+			m_vertices.emplace_back(crt_azimuthal.store3());
+		}
+	}
+
+	// finally add the top and bottom
+	m_vertices.emplace_back(bottom.store3());
+	m_vertices.emplace_back(top.store3());
+
+	// all rings beside the top and bottom ones are made of quads
+	// build them first
+	for (UINT i = 0; i < rings - 2; i++) {
+		for (UINT j = 0; j < segments - 1; j++) {
+			m_indices.emplace_back(i * segments + j);
+			m_indices.emplace_back((i + 1) * segments + j + 1);
+			m_indices.emplace_back(i * segments + j + 1);
+
+			m_indices.emplace_back(i * segments + j);
+			m_indices.emplace_back((i + 1) * segments + j);
+			m_indices.emplace_back((i + 1) * segments + j + 1);
+		}
+
+		// add the last quad after the loop to avoid working with modulos
+		m_indices.emplace_back((i + 1) * segments - 1);
+		m_indices.emplace_back((i + 1) * segments);
+		m_indices.emplace_back(i * segments);
+
+		m_indices.emplace_back((i + 1) * segments - 1);
+		m_indices.emplace_back((i + 2) * segments - 1);
+		m_indices.emplace_back((i + 1) * segments);
+	}
+
+	UINT top_idx = (UINT)m_vertices.size() - 1;
+	UINT bottom_idx = top_idx - 1;
+	// add the last 2 rings, made of triangles
+	for (UINT i = 0; i < segments - 1; i++) {
+		// the bottom ring
+		m_indices.emplace_back(bottom_idx);
+		m_indices.emplace_back(i);
+		m_indices.emplace_back(i + 1);
+
+		// the top ring
+		m_indices.emplace_back(top_idx);
+		m_indices.emplace_back(m_vertices.size() - i - 3);
+		m_indices.emplace_back(m_vertices.size() - i - 4);
+	}
+
+	// add the last triangles in both of the rings to avoid modulos
+	m_indices.emplace_back(bottom_idx);
+	m_indices.emplace_back(segments - 1);
+	m_indices.emplace_back(0);
+
+	m_indices.emplace_back(top_idx);
+	m_indices.emplace_back(m_vertices.size() - segments - 2);
+	m_indices.emplace_back(m_vertices.size() - 3);
+
+	this->setup_mesh();
+}
