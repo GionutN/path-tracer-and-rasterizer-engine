@@ -97,6 +97,7 @@ quad::quad()
 
 reg_polygon::reg_polygon(UINT vertices)
 {
+	// this builds the polygon just like the one made of the n-th roots of unity
 	vertices = vertices > 2 ? vertices : 3;
 	float theta = tau / vertices;
 	m_vertices.emplace_back(vec3());
@@ -126,48 +127,30 @@ reg_polygon::reg_polygon(UINT vertices)
 cube::cube()
 {
 	m_vertices = {
-		{vec3(-0.5f, -0.5f, -0.5f)},	// a
-		{vec3( 0.5f, -0.5f, -0.5f)},	// b
-		{vec3( 0.5f,  0.5f, -0.5f)},	// c
-		{vec3(-0.5f,  0.5f, -0.5f)},	// d
-		{vec3(-0.5f, -0.5f,  0.5f)},	// a'
-		{vec3( 0.5f, -0.5f,  0.5f)},	// b'
-		{vec3( 0.5f,  0.5f,  0.5f)},	// c'
-		{vec3(-0.5f,  0.5f,  0.5f)}		// d'
+		{vec3(-0.5f, -0.5f, -0.5f)},	// a 0
+		{vec3( 0.5f, -0.5f, -0.5f)},	// b 1
+		{vec3( 0.5f,  0.5f, -0.5f)},	// c 2
+		{vec3(-0.5f,  0.5f, -0.5f)},	// d 3
+		{vec3(-0.5f, -0.5f,  0.5f)},	// a' 4
+		{vec3( 0.5f, -0.5f,  0.5f)},	// b' 5
+		{vec3( 0.5f,  0.5f,  0.5f)},	// c' 6 
+		{vec3(-0.5f,  0.5f,  0.5f)}		// d' 7
 	};
-
-	/*m_indices = {
-		3, 0, 2,
-		2, 0, 1,
-
-		0, 4, 1,
-		1, 4, 5,
-
-		1, 5, 2,
-		2, 5, 6,
-
-		2, 6, 3,
-		3, 6, 7,
-
-		3, 7, 0,
-		0, 7, 4,
-
-		4, 7, 5,
-		5, 7, 6
-	};*/
 
 	m_indices = {
+		// -Z (back)
+		0,2,1,  0,3,2,
 		// +Z (front)
-	6,5,4,  7,6,4,
-	// -Z (back)
-	3,0,1,  2,3,1,
-	// -X (left)
-	7,4,0,  3,7,0,
-	// +X (right)
-	2,1,5,  6,2,5,
-	// +Y (top)
-	6,7,3,  2,6,3,
-	// -Y (bottom)
-	5,1,0,  4,5,0
+		5,7,4,  5,6,7,
+		// -X (left)
+		4,3,0,  4,7,3,
+		// +X (right)
+		1,6,5,  1,2,6,
+		// -Y (bottom)
+		4,1,5,  4,0,1,
+		// +Y (top)
+		3,6,2,  3,7,6,
 	};
+
+	this->setup_mesh();
 }

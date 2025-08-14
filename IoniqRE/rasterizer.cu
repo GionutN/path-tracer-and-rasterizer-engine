@@ -85,6 +85,14 @@ rasterizer::rasterizer()
 	vport.MaxDepth = 1.0f;
 	rnd_base->context()->RSSetViewports(1, &vport);
 	rnd_base->context()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3D11_RASTERIZER_DESC rd = {};
+	rd.FillMode = D3D11_FILL_SOLID;
+	rd.CullMode = D3D11_CULL_BACK;
+	rd.FrontCounterClockwise = FALSE;
+	rd.DepthClipEnable = TRUE;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateRasterizerState(&rd, &m_rs_state));
+	rnd_base->context()->RSSetState(m_rs_state.Get());
 }
 
 void rasterizer::begin_frame()
@@ -120,7 +128,6 @@ void rasterizer::draw_scene(const scene& scene, std::vector<shader>& shaders, fl
 	m_bg_shader->bind();
 	m_background->draw();
 
-	// TODO: apply transformations
 	const std::set<model*, scene::model_comparator>& models = scene.get_models();	// these are the models sorted with respect to the mesh name
 	std::string last_mesh_name = "";
 	for (const auto& m : models) {

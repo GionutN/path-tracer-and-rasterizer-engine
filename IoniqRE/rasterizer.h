@@ -22,6 +22,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_target;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rs_state;
 
 	UINT m_samples, m_quality;
 
