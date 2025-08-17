@@ -65,10 +65,11 @@ void mesh::setup_mesh()
 
 tri::tri()
 {
+	vec3 normal(0.0f, 0.0f, -1.0f);
 	m_vertices = {
-		{vec3( 0.0f,  0.5f, 0.0f)},
-		{vec3( 0.5f, -0.5f, 0.0f)},
-		{vec3(-0.5f, -0.5f, 0.0f)}
+		{ vec3( 0.0f,  0.5f, 0.0f), normal },
+		{ vec3( 0.5f, -0.5f, 0.0f), normal },
+		{ vec3(-0.5f, -0.5f, 0.0f), normal }
 	};
 
 	m_indices = {
@@ -80,11 +81,12 @@ tri::tri()
 
 quad::quad()
 {
+	vec3 normal(0.0f, 0.0f, -1.0f);
 	m_vertices = {
-		{vec3(-0.5f, -0.5f, 0.0f)},
-		{vec3( 0.5f, -0.5f, 0.0f)},
-		{vec3( 0.5f,  0.5f, 0.0f)},
-		{vec3(-0.5f,  0.5f, 0.0f)},
+		{ vec3(-0.5f, -0.5f, 0.0f), normal },
+		{ vec3( 0.5f, -0.5f, 0.0f), normal },
+		{ vec3( 0.5f,  0.5f, 0.0f), normal },
+		{ vec3(-0.5f,  0.5f, 0.0f), normal }
 	};
 
 	m_indices = {
@@ -100,15 +102,16 @@ reg_polygon::reg_polygon(UINT vertices)
 	// this builds the polygon just like the one made of the n-th roots of unity
 	vertices = vertices > 2 ? vertices : 3;
 	float theta = tau / vertices;
-	m_vertices.emplace_back(vec3());
+	vec3 normal(0.0f, 0.0f, -1.0f);
+	m_vertices.emplace_back(vec3(), normal);
 	
 	iqvec vertex(0.5f, 0.0f, 0.0f, 0.0f);
-	m_vertices.emplace_back(vertex.store3());
+	m_vertices.emplace_back(vertex.store3(), normal);
 	iqmat transform = iqmat::rotation_z(theta);
 
 	for (UINT i = 1; i < vertices; i++) {
 		vertex.transform(transform, iqvec::usage::POINT);
-		m_vertices.emplace_back(vertex.store3());
+		m_vertices.emplace_back(vertex.store3(), normal);
 	}
 
 	for (UINT i = 1; i < vertices; i++) {
@@ -127,14 +130,41 @@ reg_polygon::reg_polygon(UINT vertices)
 cube::cube()
 {
 	m_vertices = {
-		{vec3(-0.5f, -0.5f, -0.5f)},	// a 0
-		{vec3( 0.5f, -0.5f, -0.5f)},	// b 1
-		{vec3( 0.5f,  0.5f, -0.5f)},	// c 2
-		{vec3(-0.5f,  0.5f, -0.5f)},	// d 3
-		{vec3(-0.5f, -0.5f,  0.5f)},	// a' 4
-		{vec3( 0.5f, -0.5f,  0.5f)},	// b' 5
-		{vec3( 0.5f,  0.5f,  0.5f)},	// c' 6 
-		{vec3(-0.5f,  0.5f,  0.5f)}		// d' 7
+		// -Z (back)
+		{vec3(-0.5f, -0.5f, -0.5f), vec3(0.0f, 0.0f, -1.0f)},	// a 0
+		{vec3( 0.5f, -0.5f, -0.5f), vec3(0.0f, 0.0f, -1.0f)},	// b 1
+		{vec3( 0.5f,  0.5f, -0.5f), vec3(0.0f, 0.0f, -1.0f)},	// c 2
+		{vec3(-0.5f,  0.5f, -0.5f), vec3(0.0f, 0.0f, -1.0f)},	// d 3
+
+		// +Z (front)
+		{vec3(-0.5f, -0.5f,  0.5f), vec3(0.0f, 0.0f, 1.0f)},	// a' 4
+		{vec3( 0.5f, -0.5f,  0.5f), vec3(0.0f, 0.0f, 1.0f)},	// b' 5
+		{vec3( 0.5f,  0.5f,  0.5f), vec3(0.0f, 0.0f, 1.0f)},	// c' 6 
+		{vec3(-0.5f,  0.5f,  0.5f), vec3(0.0f, 0.0f, 1.0f)},	// d' 7
+
+		// -X (left)
+		{vec3(-0.5f, -0.5f,  0.5f), vec3(-1.0f, 0.0f, 0.0f)},	// a' 4
+		{vec3(-0.5f,  0.5f, -0.5f), vec3(-1.0f, 0.0f, 0.0f)},	// d 3
+		{vec3(-0.5f, -0.5f, -0.5f), vec3(-1.0f, 0.0f, 0.0f)},	// a 0
+		{vec3(-0.5f,  0.5f,  0.5f), vec3(-1.0f, 0.0f, 0.0f)},	// d' 7
+
+		// +X (right)
+		{vec3(0.5f, -0.5f, -0.5f), vec3(1.0f, 0.0f, 0.0f)},	// b 1
+		{vec3(0.5f,  0.5f,  0.5f), vec3(1.0f, 0.0f, 0.0f)},	// c' 6 
+		{vec3(0.5f, -0.5f,  0.5f), vec3(1.0f, 0.0f, 0.0f)},	// b' 5
+		{vec3(0.5f,  0.5f, -0.5f), vec3(1.0f, 0.0f, 0.0f)},	// c 2
+
+		// -Y (bottom)
+		{vec3(-0.5f, -0.5f,  0.5f), vec3(0.0f, -1.0f, 0.0f)},	// a' 4
+		{vec3( 0.5f, -0.5f, -0.5f), vec3(0.0f, -1.0f, 0.0f)},	// b 1
+		{vec3( 0.5f, -0.5f,  0.5f), vec3(0.0f, -1.0f, 0.0f)},	// b' 5
+		{vec3(-0.5f, -0.5f, -0.5f), vec3(0.0f, -1.0f, 0.0f)},	// a 0
+
+		// +Y (top)
+		{vec3(-0.5f,  0.5f, -0.5f), vec3(0.0f, 1.0f, 0.0f)},	// d 3
+		{vec3( 0.5f,  0.5f,  0.5f), vec3(0.0f, 1.0f, 0.0f)},	// c' 6 
+		{vec3( 0.5f,  0.5f, -0.5f), vec3(0.0f, 1.0f, 0.0f)},	// c 2
+		{vec3(-0.5f,  0.5f,  0.5f), vec3(0.0f, 1.0f, 0.0f)},	// d' 7
 	};
 
 	m_indices = {
@@ -143,13 +173,13 @@ cube::cube()
 		// +Z (front)
 		5,7,4,  5,6,7,
 		// -X (left)
-		4,3,0,  4,7,3,
+		8,9,10,  8,11,9,
 		// +X (right)
-		1,6,5,  1,2,6,
+		12,13,14,  12,15,13,
 		// -Y (bottom)
-		4,1,5,  4,0,1,
+		16,17,18,  16,19,17,
 		// +Y (top)
-		3,6,2,  3,7,6,
+		20,21,22,  20,23,21
 	};
 
 	this->setup_mesh();
@@ -157,12 +187,13 @@ cube::cube()
 
 // TODO:
 // check if the mesh is correct under lighting
-uv_sphere::uv_sphere(UINT segments, UINT rings)
+uv_sphere::uv_sphere(bool flat, UINT segments, UINT rings, mesh::type t)
 {
 	// y = sin(theta)
 	// x = cos(theta) * cos(phi)
 	// z = cos(theta) * sin(phi)
 
+	// TODO: add mesh data for a flat shaded uv sphere
 
 	// segments is the number of vertices in the xOy plane
 	// rings is the number of segments along the z axis (rings + 1 vertices in the z axis direction)
@@ -181,19 +212,19 @@ uv_sphere::uv_sphere(UINT segments, UINT rings)
 	iqvec crt_polar = bottom;
 	for (UINT i = 1; i < rings; i++) {
 		crt_polar.transform(polar_tr, iqvec::usage::POINT);
-		m_vertices.emplace_back(crt_polar.store3());
+		m_vertices.emplace_back(crt_polar.store3(), crt_polar.store3());
 
 		// at each ring, rotate around the y axis to get all the segments
 		iqvec crt_azimuthal = crt_polar;
 		for (UINT j = 1; j < segments; j++) {
 			crt_azimuthal.transform(azimuthal_tr, iqvec::usage::POINT);
-			m_vertices.emplace_back(crt_azimuthal.store3());
+			m_vertices.emplace_back(crt_azimuthal.store3(), crt_azimuthal.store3());
 		}
 	}
 
 	// finally add the top and bottom
-	m_vertices.emplace_back(bottom.store3());
-	m_vertices.emplace_back(top.store3());
+	m_vertices.emplace_back(bottom.store3(), bottom.store3());
+	m_vertices.emplace_back(top.store3(), top.store3());
 
 	// all rings beside the top and bottom ones are made of quads
 	// build them first

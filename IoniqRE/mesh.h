@@ -12,12 +12,16 @@
 struct vertex
 {
 	vec3 pos;
-	vertex(const vec3& pos) : pos(pos) {}
+	vec3 normal;
+	vertex(const vec3& pos, const vec3& normal) : pos(pos), normal(normal) {}
 	vertex() = default;
 
-	static constexpr D3D11_INPUT_ELEMENT_DESC vertex_layout = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA };
+	static constexpr D3D11_INPUT_ELEMENT_DESC vertex_layout[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
 	static D3D11_INPUT_ELEMENT_DESC const* get_vertex_layout() {
-		return &vertex_layout;
+		return vertex_layout;
 	}
 };
 
@@ -86,5 +90,5 @@ public:
 class uv_sphere : public mesh
 {
 public:
-	uv_sphere(UINT segments = 32, UINT rings = 16);
+	uv_sphere(bool flat = false, UINT segments = 32, UINT rings = 16, mesh::type t = mesh::type::SPHERES);
 };

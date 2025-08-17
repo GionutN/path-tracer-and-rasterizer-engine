@@ -17,7 +17,7 @@ shader::shader(const std::wstring& vertex_path, const std::wstring& pixel_path)
 	RENDERER_THROW_FAILED(D3DReadFileToBlob(vertex_path.c_str(), &blob));
 	RENDERER_THROW_FAILED(RENDERER_DEV->CreateVertexShader(blob->GetBufferPointer(), blob->GetBufferSize(), nullptr, &m_vshader));
 
-	RENDERER_THROW_FAILED(RENDERER_DEV->CreateInputLayout(vertex::get_vertex_layout(), 1, blob->GetBufferPointer(), blob->GetBufferSize(), &m_layout));
+	RENDERER_THROW_FAILED(RENDERER_DEV->CreateInputLayout(vertex::get_vertex_layout(), 2, blob->GetBufferPointer(), blob->GetBufferSize(), &m_layout));
 
 	D3D11_BUFFER_DESC cb_desc = {};
 	cb_desc.ByteWidth = sizeof(cbuffer);

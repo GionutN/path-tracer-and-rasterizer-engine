@@ -21,9 +21,9 @@ application::application(const ref<window>& wnd)
 
 	scn.add_mesh("default", tri());
 	scn.add_mesh("cube", cube());
-	scn.add_mesh("sphere", uv_sphere());
+	scn.add_mesh("sphere", uv_sphere(false, 256, 128));
 
-	scn.add_model("main", model("cube"));
+	scn.add_model("main", model("sphere"));
 	//scn.get_model("main").set_transforms(1.0f, iqvec(0.0f, 0.0f, 0.0f, 0.0f), iqvec(0.0f, 0.0f, 1.0f, 0.0f));
 
 	// TODO:
@@ -71,7 +71,7 @@ void application::update_frame()
 	switch (e.get_type()) {
 	case keyboard::event::type::PRESS:
 		if (e.get_key() == 'P') {
-			renderer::get()->toggle_engine();
+			//renderer::get()->toggle_engine();
 		}
 	}
 
@@ -79,9 +79,9 @@ void application::update_frame()
 		renderer::get()->reset();
 	}
 
-	//radians += dt;
-	//radians = std::fmodf(radians, tau);
-	//scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
+	radians += dt;
+	radians = std::fmodf(radians, tau);
+	scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
 }
 
 void application::draw_frame()
