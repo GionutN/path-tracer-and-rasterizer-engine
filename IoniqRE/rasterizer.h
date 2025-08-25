@@ -23,6 +23,9 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_msaa_target_texture;
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_nonmsaa_intermediate_texture;
 	Microsoft::WRL::ComPtr<ID3D11RasterizerState> m_rs_state;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilState> m_ds_state;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_ds_tex;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_ds_view;
 
 	UINT m_samples, m_quality;
 

@@ -30,19 +30,19 @@ rasterizer* rasterizer::get()
 
 rasterizer::rasterizer()
 	:
-	m_samples(8)
+	m_samples(4)
 {
 	HRESULT hr;
 	renderer_base* rnd_base = RENDERER;
 
-	RENDERER_THROW_FAILED(rnd_base->device()->CheckMultisampleQualityLevels(rnd_base->pixel_format(), 8, &m_quality));
+	RENDERER_THROW_FAILED(rnd_base->device()->CheckMultisampleQualityLevels(rnd_base->pixel_format(), m_samples, &m_quality));
 	m_quality--;	// always use the maximum quality level, quality - 1
 
 	// create the texture for msaa rendering
 	D3D11_TEXTURE2D_DESC msaa_tex_desc = {};
 	msaa_tex_desc.Width = window::width;
 	msaa_tex_desc.Height = window::height;
-	msaa_tex_desc.MipLevels = 1;	// multi-sampled
+	msaa_tex_desc.MipLevels = 1;	// multisampled
 	msaa_tex_desc.ArraySize = 1;
 	msaa_tex_desc.Format = rnd_base->pixel_format();
 	msaa_tex_desc.SampleDesc.Count = m_samples;
@@ -72,8 +72,38 @@ rasterizer::rasterizer()
 	D3D11_RENDER_TARGET_VIEW_DESC rtv_desc = {};
 	rtv_desc.Format = msaa_tex_desc.Format;
 	rtv_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DMS;
-	rtv_desc.Texture2D.MipSlice = 0;
 	RENDERER_THROW_FAILED(rnd_base->device()->CreateRenderTargetView(m_msaa_target_texture.Get(), &rtv_desc, &m_target));
+
+	// build the depth stencil buffer
+	// disable stencil for now
+	D3D11_DEPTH_STENCIL_DESC ds_desc = {};
+	ds_desc.DepthEnable = TRUE;
+	ds_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	ds_desc.DepthFunc = D3D11_COMPARISON_LESS;
+	ds_desc.StencilEnable = FALSE;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateDepthStencilState(&ds_desc, &m_ds_state));
+	rnd_base->context()->OMSetDepthStencilState(m_ds_state.Get(), 1);
+
+	// create the depth stencil texture (data is written to a texture in direct3d11)
+	D3D11_TEXTURE2D_DESC ds_tex_desc = {};
+	ds_tex_desc.Width = window::width;
+	ds_tex_desc.Height = window::height;
+	ds_tex_desc.MipLevels = 1;	// multisampled
+	ds_tex_desc.ArraySize = 1;
+	ds_tex_desc.Format = DXGI_FORMAT_D32_FLOAT;
+	ds_tex_desc.SampleDesc.Count = m_samples;
+	ds_tex_desc.SampleDesc.Quality = m_quality;
+	ds_tex_desc.Usage = D3D11_USAGE_DEFAULT;
+	ds_tex_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	ds_tex_desc.CPUAccessFlags = 0;
+	ds_tex_desc.MiscFlags = 0;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateTexture2D(&ds_tex_desc, nullptr, &m_ds_tex));
+
+	// create the depth stencil view
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc = {};
+	dsv_desc.Format = DXGI_FORMAT_D32_FLOAT;
+	dsv_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+	RENDERER_THROW_FAILED(rnd_base->device()->CreateDepthStencilView(m_ds_tex.Get(), &dsv_desc, &m_ds_view));
 
 	// set the viewport
 	D3D11_VIEWPORT vport = {};
@@ -100,7 +130,8 @@ void rasterizer::begin_frame()
 {
 	const iqvec clear_col = RENDERER->clear_color();
 	float clear[4] = { clear_col[0], clear_col[1], clear_col[2], clear_col[3] };
-	RENDERER->context()->OMSetRenderTargets(1, m_target.GetAddressOf(), nullptr);
+	RENDERER->context()->OMSetRenderTargets(1, m_target.GetAddressOf(), m_ds_view.Get());
+	RENDERER->context()->ClearDepthStencilView(m_ds_view.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);	// only clear the depth buffer for now
 	RENDERER->context()->ClearRenderTargetView(m_target.Get(), clear);
 }
 
@@ -125,9 +156,9 @@ void rasterizer::end_frame()
 
 void rasterizer::draw_scene(const scene& scene, std::vector<shader>& shaders, float dt)
 {
-	m_background->bind();
-	m_bg_shader->bind();
-	m_background->draw();
+	//m_background->bind();
+	//m_bg_shader->bind();
+	//m_background->draw();	// instead of a simple quad, add hdri or cubemap support
 
 	const std::set<model*, scene::model_comparator>& models = scene.get_models();	// these are the models sorted with respect to the mesh name
 	std::string last_mesh_name = "";
