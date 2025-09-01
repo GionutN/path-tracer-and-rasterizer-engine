@@ -215,12 +215,18 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 
 			triangle tr(v0, v1, v2);
 			if (tr.intersect(r)) {
-				return iqvec(1.0f, 0.0f, 1.0f, 0.0f);
+				return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
 			}
 		}
 	}
 
 	// TODO: add here intersection intersection checks for other shape primitives
+	for (UINT i = 0; i < packet.num_drawcalls[mesh::type::SPHERES]; i++) {
+		sphere s(packet.sphere_dcs[i].center, packet.sphere_dcs[i].radius);
+		if (s.intersect(r)) {
+			return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+		}
+	}
 
 	iqvec dir = r.direction().normalize3();
 	const float t = (dir.y + 1.0f) * 0.5f;

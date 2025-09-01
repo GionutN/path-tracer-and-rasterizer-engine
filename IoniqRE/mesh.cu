@@ -188,6 +188,8 @@ cube::cube()
 // TODO:
 // check if the mesh is correct under lighting
 uv_sphere::uv_sphere(bool flat, UINT segments, UINT rings, mesh::type t)
+	:
+	mesh(t)
 {
 	// y = sin(theta)
 	// x = cos(theta) * cos(phi)

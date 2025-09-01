@@ -125,6 +125,10 @@ scene::gpu_packet scene::build_packet() const
 		UINT idx = 0;
 		for (const auto& n : names) {
 			const mesh& m = m_meshes.at(n);
+			if (m.get_type() != mesh::type::TRIANGLES) {
+				pkt.num_tri_meshes--;
+				continue;
+			}
 
 			UINT num_indices = m.get_indices().size();
 			UINT num_vertices = m.get_vertices().size();
@@ -158,6 +162,8 @@ scene::gpu_packet scene::build_packet() const
 		// use a bsearch to find the mesh id in the array of names
 		if (pm->get_mesh_name() != last_mesh_name) {
 			last_mesh_name = pm->get_mesh_name();
+
+			// ignore the compiler warning, overflow is a must
 			mesh_id = std::lower_bound(names.begin() + (mesh_id + 1), names.end(), last_mesh_name) - names.begin();
 		}
 		switch (m_meshes.at(last_mesh_name).get_type()) {
@@ -183,7 +189,7 @@ scene::gpu_packet scene::build_packet() const
 	if (pkt.num_tri_meshes != 0) {
 		RENDERER_THROW_CUDA(cudaMalloc((void**)&tri_meshes, pkt.num_tri_meshes * sizeof(gpu_packet::tri_mesh)));
 	}
-	for (UINT i = 0; i < m_meshes.size(); i++) {
+	for (UINT i = 0; i < pkt.num_tri_meshes; i++) {
 		vertex* vertices;
 		UINT* indices;
 		RENDERER_THROW_CUDA(cudaMalloc((void**)&vertices, pkt.tri_meshes[i].num_vertices * sizeof(vertex)));
@@ -201,7 +207,7 @@ scene::gpu_packet scene::build_packet() const
 		RENDERER_THROW_CUDA(cudaMemcpy(&tri_meshes[i].vertices, &vertices, sizeof(size_t), cudaMemcpyHostToDevice));
 		RENDERER_THROW_CUDA(cudaMemcpy(&tri_meshes[i].indices, &indices, sizeof(size_t), cudaMemcpyHostToDevice));
 	}
-	if (m_meshes.size() != 0) {
+	if (pkt.num_tri_meshes != 0) {
 		delete[] pkt.tri_meshes; pkt.tri_meshes = tri_meshes;
 	}
 
