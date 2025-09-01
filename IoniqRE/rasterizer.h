@@ -28,8 +28,4 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_ds_view;
 
 	UINT m_samples, m_quality;
-
-	// make these pointers so that they do not get constructed before the renderer gets constructed
-	ref<mesh> m_background;
-	ref<shader> m_bg_shader;
 };

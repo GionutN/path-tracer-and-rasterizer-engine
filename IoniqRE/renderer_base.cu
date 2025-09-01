@@ -27,7 +27,7 @@ renderer_base* renderer_base::get()
 renderer_base::renderer_base(const ref<window>& wnd)
 	:
 	m_wnd(wnd),
-	m_clear(iqvec(0.0f, 0.0f, 0.0f, 1.0f)),
+	m_clear(iqvec(0.62f, 0.84f, 1.0f, 1.0f)),
 	m_output_format(DXGI_FORMAT_B8G8R8A8_UNORM)
 {
 	HRESULT hr;

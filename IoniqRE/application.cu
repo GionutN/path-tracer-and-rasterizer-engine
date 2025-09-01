@@ -27,7 +27,6 @@ application::application(const ref<window>& wnd)
 	//scn.get_model("main").set_transforms(1.0f, iqvec(0.0f, 0.0f, 0.0f, 0.0f), iqvec(0.0f, 0.0f, 10.0f, 0.0f));
 
 	// TODO:
-	// add the depth stencil buffer
 	// get the camera working for the path tracer
 	// add phong lighting
 

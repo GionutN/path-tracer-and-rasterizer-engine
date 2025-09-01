@@ -10,8 +10,6 @@ void rasterizer::init()
 {
 	if (!g_rasterizer) {
 		g_rasterizer = new rasterizer();
-		g_rasterizer->m_background = std::make_shared<quad>();
-		g_rasterizer->m_bg_shader = std::make_shared<shader>(L"bg_vert_shader.cso", L"bg_pixel_shader.cso");
 	}
 }
 
@@ -156,10 +154,6 @@ void rasterizer::end_frame()
 
 void rasterizer::draw_scene(const scene& scene, std::vector<shader>& shaders, float dt)
 {
-	//m_background->bind();
-	//m_bg_shader->bind();
-	//m_background->draw();	// instead of a simple quad, add hdri or cubemap support
-
 	const std::set<model*, scene::model_comparator>& models = scene.get_models();	// these are the models sorted with respect to the mesh name
 	std::string last_mesh_name = "";
 	for (const auto& m : models) {
