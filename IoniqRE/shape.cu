@@ -12,17 +12,17 @@ __device__ sphere::sphere(const iqvec& pos, float radius)
 
 __device__ bool sphere::intersect(const ray& r)
 {
+	// the coefficient of t^2 is 1 because the ray direction is normalized
 	const iqvec oc = m_position - r.origin();
-	const float a = r.direction().length3sq();
 	const float halfb = r.direction().dot3(oc);
 	const float c = oc.length3sq() - m_radius * m_radius;
-	const float delta = halfb * halfb - a * c;
+	const float delta = halfb * halfb - c;
 
 	// compute the ray's intersection point parameter t
 	if (delta < 0.0f) {
 		return false;
 	}
-	const float t1 = (halfb - sqrtf(delta)) / a;
+	const float t1 = halfb - sqrtf(delta);
 	return t1 > 0.0f;
 	
 }

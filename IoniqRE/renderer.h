@@ -9,6 +9,8 @@
 #include "renderer_base.h"
 #include "renderer_template.h"
 
+class camera;
+
 class renderer : public renderer_template
 {
 public:
@@ -21,12 +23,12 @@ public:
 	};
 
 public:
-	static void init(const ref<window>& wnd);
+	static void init(const ref<window>& wnd, camera* cam);
 	static void shutdown();
 	static renderer* get();
 
 	void begin_frame() override;
-	void end_frame() override ;
+	void end_frame() override;
 	void draw_scene(const scene& scene, std::vector<shader>& shaders, float dt) override;
 
 	void toggle_engine() { m_new_engine = (engine)(((int)m_new_engine + 1) % 2); }

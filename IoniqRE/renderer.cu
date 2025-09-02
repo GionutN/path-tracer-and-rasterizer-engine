@@ -16,12 +16,12 @@ static renderer* g_renderer = nullptr;
 
 namespace wrl = Microsoft::WRL;
 
-void renderer::init(const ref<window>& wnd)
+void renderer::init(const ref<window>& wnd, camera* cam)
 {
 	if (!g_renderer) {
 		renderer_base::init(wnd);
 		rasterizer::init();
-		path_tracer::init();
+		path_tracer::init(cam);
 		g_renderer = new renderer();
 	}
 }

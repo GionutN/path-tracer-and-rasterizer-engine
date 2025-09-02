@@ -5,6 +5,8 @@
 #include "renderer_base.h"
 #include "renderer_template.h"
 
+#include "camera.h"
+
 class path_tracer : public renderer_template
 {
 public:
@@ -17,7 +19,7 @@ public:
 	};
 
 public:
-	static void init();
+	static void init(camera* cam);
 	static void shutdown();
 	static path_tracer* get();
 
@@ -30,7 +32,7 @@ public:
 	inline void reset() { m_pending_reset = true; }
 
 private:
-	path_tracer();
+	path_tracer(camera* cam);
 	~path_tracer();
 
 private:
@@ -49,6 +51,7 @@ private:
 	const size_t m_fbsize;
 	const size_t m_num_pixels;
 	curandState* m_dev_rand_state;
+	camera* m_camera;
 
 	pixel* m_host_pixel_buffer;
 	pixel* m_dev_pixel_buffer;	// ever-converging, should set a limit

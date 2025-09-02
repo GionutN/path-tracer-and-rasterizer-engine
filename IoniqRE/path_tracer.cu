@@ -11,10 +11,10 @@ static path_tracer* g_path_tracer = nullptr;
 
 namespace wrl = Microsoft::WRL;
 
-void path_tracer::init()
+void path_tracer::init(camera* cam)
 {
 	if (!g_path_tracer) {
-		g_path_tracer = new path_tracer();
+		g_path_tracer = new path_tracer(cam);
 	}
 }
 
@@ -43,12 +43,13 @@ __global__ static void renderer_init_kernel(UINT width, UINT height, curandState
 	curand_init(1984, pixelid, 0, &rand_states[pixelid]);
 }
 
-path_tracer::path_tracer()
+path_tracer::path_tracer(camera* cam)
 	:
 	m_blocks_per_grid(window::width / threads + 1, window::height / threads + 1),
 	m_threads_per_block(threads, threads),
 	m_num_pixels(window::height * window::width),
-	m_fbsize(window::height * window::width * sizeof(pixel))
+	m_fbsize(window::height * window::width * sizeof(pixel)),
+	m_camera(cam)
 {
 	HRESULT hr;
 	cudaError cderr;
@@ -233,35 +234,21 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 }
 
-__global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, UINT width, UINT height, scene::gpu_packet packet, curandState* rand_states)
+__global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, camera* cam, scene::gpu_packet packet, curandState* rand_states)
 {
 	const UINT y = threadIdx.y + blockIdx.y * blockDim.y;
 	const UINT x = threadIdx.x + blockIdx.x * blockDim.x;
-	if (y >= height || x >= width) {
+	if (y >= cam->get_height() || x >= cam->get_width()) {
 		return;
 	}
 	// compute the viewing direction of each pixel
-	const UINT pixelid = y * width + x;
+	const UINT pixelid = y * cam->get_width() + x;
 	curandState* local_state = &rand_states[pixelid];
 
-	const float aspect_ratio = (float)width / height;
-	iqvec center = iqvec(0.0f, 0.0f, 2.0f, 1.0f);
-	iqvec viewport = iqvec(0.0f, 0.0f, 1.0f, 0.0f);
-	iqvec viewport_u = iqvec(aspect_ratio, 0.0f, 0.0f, 0.0f);
-	iqvec viewport_v = iqvec(0.0f, -1.0f, 0.0f, 0.0f);
-	iqvec du = viewport_u / width;
-	iqvec dv = viewport_v / height;
-	iqvec topleft = center - viewport - (viewport_u + viewport_v) / 2.0f;
-	iqvec pixel00 = topleft + 0.5f * (du + dv);
-
 	iqvec path_color;
-	int samples = 1;
+	int samples = 4;
 	for (int i = 0; i < samples; i++) {
-		// a pixel has width and height 1, so from its center add an offset of (-0.5; 0.5)
-		iqvec crt_pixel = pixel00 + (x + random::real(local_state, -0.5f, 0.5f)) * du + (y + random::real(local_state, -0.5f, 0.5f)) * dv;
-
-		// ray direction is NOT normalized
-		ray r = ray(center, crt_pixel - center);
+		ray r = cam->get_ray(x, y, local_state);
 
 		iqvec color = path_tracer::ray_color(r, packet);
 		color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
@@ -316,6 +303,6 @@ void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, f
 			m_pending_reset = false;
 		}
 		m_crt_frame++;
-		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>> (m_dev_pixel_buffer, m_crt_frame, window::width, window::height, d_packet, m_dev_rand_state);
+		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>> (m_dev_pixel_buffer, m_crt_frame, m_camera, d_packet, m_dev_rand_state);
 	}
 }

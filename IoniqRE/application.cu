@@ -10,12 +10,14 @@
 
 application::application(const ref<window>& wnd)
 	:
-	m_wnd(wnd),
-	cam(wnd->width, wnd->height)
+	m_wnd(wnd)
 {
+	cudaMallocManaged<camera>(&cam, sizeof(camera));
+	*cam = camera(wnd->width, wnd->height);
+
 	timer::init();
 	random::init();
-	renderer::init(wnd);
+	renderer::init(wnd, cam);
 
 	shaders.emplace_back(L"vertex_shader.cso", L"pixel_shader.cso");
 
@@ -23,14 +25,15 @@ application::application(const ref<window>& wnd)
 	scn.add_mesh("cube", cube());
 	scn.add_mesh("sphere", uv_sphere(false, 128, 64));	// the path tracer is not yet optimised, keep the vertex count low 
 
-	scn.add_model("main", model("sphere"));
-	//scn.get_model("main").set_transforms(1.0f, iqvec(pi_div_4, 0.0f, 0.0f, 0.0f), 0.0f);
+	scn.add_model("main", model("cube"));
+	scn.get_model("main").set_transforms(1.0f, iqvec(pi_div_4, 0.0f, 0.0f, 0.0f), 0.0f);
 
 	// TODO:
-	// get the camera working for the path tracer
+	// add the normal model matrix in the vertex shaders
+	// add normals to the path tracer
 	// add phong lighting
 
-	shaders[0].update_view_proj(cam.get_view(), cam.get_projection());
+	shaders[0].update_view_proj(cam->get_view(), cam->get_projection());
 }
 
 application::~application()
@@ -38,6 +41,8 @@ application::~application()
 	renderer::shutdown();
 	random::shutdown();
 	timer::shutdown();
+
+	cudaFree(cam);
 }
 
 bool application::process_message()
