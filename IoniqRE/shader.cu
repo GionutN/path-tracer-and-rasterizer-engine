@@ -49,6 +49,7 @@ void shader::update_transform(const iqmat& tr)
 {
 	// this needs to be transposed for whatever reason
 	cb.model = tr.transposed();
+	cb.normal_mat = tr.store3x3().inverse().transposed();
 }
 
 void shader::update_view_proj(const iqmat& view, const iqmat& proj)

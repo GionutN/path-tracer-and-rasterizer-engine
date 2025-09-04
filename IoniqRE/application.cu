@@ -83,9 +83,10 @@ void application::update_frame()
 		renderer::get()->reset();
 	}
 
-	//radians += dt;
-	//radians = std::fmodf(radians, tau);
-	//scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
+	radians += dt;
+	radians = std::fmodf(radians, tau);
+	scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
+	renderer::get()->reset();
 }
 
 void application::draw_frame()

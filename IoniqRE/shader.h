@@ -13,6 +13,7 @@ class shader
 public:
 	struct cbuffer
 	{
+		mat3x3 normal_mat;
 		iqmat model;
 		iqmat view;
 		iqmat projection;
@@ -33,6 +34,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> m_layout;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_transform_cbuffer;
 
-	cbuffer cb = { 1.0f, 1.0f, 1.0f };
+	cbuffer cb = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 };

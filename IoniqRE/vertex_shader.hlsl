@@ -1,9 +1,9 @@
 cbuffer transform_cbuff
 {
-	// TODO: add a normal model matrix
-	matrix model;
-	matrix view;
-	matrix projection;
+	float3x3 normal_mat;
+	float4x4 model;
+	float4x4 view;
+	float4x4 projection;
 };
 
 struct vs_out
@@ -19,6 +19,7 @@ vs_out main(float3 pos : POSITION, float3 norm : NORMAL)
 	vs.pos = mul(vs.pos, view);
 	vs.pos = mul(vs.pos, projection);
 
-	vs.col = float4(0.5f * norm + 0.5f, 1.0f);
+	float3 world_normal = normalize(mul(normal_mat, norm));
+	vs.col = float4(0.5f * world_normal + 0.5f, 1.0f);
 	return vs;
 }

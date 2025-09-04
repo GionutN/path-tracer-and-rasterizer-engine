@@ -3,6 +3,27 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+struct mat3x3
+{
+public:
+	__host__ __device__ mat3x3(float _00, float _01, float _02,
+		float _10, float _11, float _12,
+		float _20, float _21, float _22);
+	__host__ __device__ mat3x3(float* data);
+	__host__ __device__ mat3x3(float val = 1.0f);
+
+	__host__ __device__ float determinant() const;
+	__host__ __device__ mat3x3 inversed() const;
+	__host__ __device__ mat3x3& inverse();
+	__host__ __device__ mat3x3 transposed() const;
+	__host__ __device__ mat3x3& transpose();
+
+public:
+	// 4 columns to match the hlsl format
+	// float3x3 is actually 3 float4s, so 48 bytes
+	float m[3][4];
+};
+
 class iqvec;
 
 // hlsl compatible (column major matrix class)
@@ -17,6 +38,8 @@ public:
 	__host__ __device__ iqmat(float val = 1.0f);
 	__host__ __device__ iqvec row_to_vec(int row) const;
 	__host__ __device__ iqvec col_to_vec(int col) const;
+	__host__ __device__ static iqmat load3x3(const mat3x3& other, float val = 1.0f);	// the value is the cell [3, 3]
+	__host__ __device__ mat3x3 store3x3() const;
 
 	__host__ __device__ iqmat operator*(const iqmat& other) const;
 	__host__ __device__ iqmat& operator*=(const iqmat& other);
@@ -32,7 +55,7 @@ public:
 	__host__ __device__ iqmat& transpose();
 	__host__ __device__ float determinant() const;
 
-	__host__ __device__ iqmat inveresed() const;
+	__host__ __device__ iqmat inversed() const;
 	__host__ __device__ iqmat& inverse();
 
 	__host__ __device__ bool is_identity() const;

@@ -13,8 +13,8 @@ camera::camera(uint16_t width, uint16_t height, float fovh, float znear, float z
 	//m_projection = iqmat::orthographic((float)width / height, znear, zfar);
 
 	// these must exist, so no need for sanity checks
-	m_inv_view = m_view.inveresed();
-	m_inv_proj = m_projection.inveresed();
+	m_inv_view = m_view.inversed();
+	m_inv_proj = m_projection.inversed();
 }
 
 __device__ ray camera::get_ray(uint16_t x, uint16_t y, curandState* local_state)

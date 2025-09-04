@@ -34,6 +34,31 @@ __host__ __device__ iqvec iqmat::col_to_vec(int col) const {
 	return iqvec(m[0][col], m[1][col], m[2][col], m[3][col]);
 }
 
+__host__ __device__ iqmat iqmat::load3x3(const mat3x3& other, float val)
+{
+	iqmat res;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			res.m[i][j] = other.m[i][j];
+		}
+	}
+
+	res.m[3][3] = val;
+	return res;
+}
+
+__host__ __device__ mat3x3 iqmat::store3x3() const
+{
+	mat3x3 res;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			res.m[i][j] = m[i][j];
+		}
+	}
+
+	return res;
+}
+
 __host__ __device__ iqmat iqmat::operator*(const iqmat& other) const {
 	return iqmat(this->row_to_vec(0).dot4(other.col_to_vec(0)),
 		this->row_to_vec(0).dot4(other.col_to_vec(1)),
@@ -113,7 +138,7 @@ __host__ __device__ float iqmat::determinant() const {
 		m[0][1] * m[1][0] * m[2][2] * m[3][3] + m[0][0] * m[1][1] * m[2][2] * m[3][3];
 }
 
-__host__ __device__ iqmat iqmat::inveresed() const {
+__host__ __device__ iqmat iqmat::inversed() const {
 	float det = this->determinant();
 	if (fabsf(det) < 0.00001f) {
 		return iqmat(INFINITY);
@@ -246,7 +271,7 @@ __host__ __device__ iqmat iqmat::inveresed() const {
 }
 
 __host__ __device__ iqmat& iqmat::inverse() {
-	*this = this->inveresed();
+	*this = this->inversed();
 	return *this;
 }
 
@@ -395,4 +420,85 @@ __host__ __device__ iqmat iqmat::rotation(float angle, const iqvec& axis) {
 	result.m[2][1] = axis.y * axis.z * (1.0f - c) - axis.x * s;
 	result.m[2][2] = c + axis.z * axis.z * (1.0f - c);
 	return result;
+}
+
+mat3x3::mat3x3(float _00, float _01, float _02, float _10, float _11, float _12, float _20, float _21, float _22)
+{
+	m[0][0] = _00; m[0][1] = _01; m[0][2] = _02;
+	m[1][0] = _10; m[1][1] = _11; m[1][2] = _12;
+	m[2][0] = _20; m[2][1] = _21; m[2][2] = _22;
+}
+
+mat3x3::mat3x3(float* data)
+{
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			m[i][j] = data[i * 3 + j];
+		}
+	}
+}
+
+mat3x3::mat3x3(float val)
+{
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			m[i][j] = 0.0f;
+		}
+	}
+
+	m[0][0] = m[1][1] = m[2][2] = val;
+}
+
+__host__ __device__ float mat3x3::determinant() const
+{
+	return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
+		m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+		m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+}
+
+__host__ __device__ mat3x3 mat3x3::inversed() const
+{
+	float det = this->determinant();
+	if (fabsf(det) < 0.00001f) {
+		return mat3x3(INFINITY);
+	}
+
+	mat3x3 inv;
+	inv.m[0][0] = (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det;
+	inv.m[0][1] = -(m[0][1] * m[2][2] - m[0][2] * m[2][1]) / det;
+	inv.m[0][2] = (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det;
+
+	inv.m[1][0] = -(m[1][0] * m[2][2] - m[1][2] * m[2][0]) / det;
+	inv.m[1][1] = (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det;
+	inv.m[1][2] = -(m[0][0] * m[1][2] - m[0][2] * m[1][0]) / det;
+
+	inv.m[2][0] = (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det;
+	inv.m[2][1] = -(m[0][0] * m[2][1] - m[0][1] * m[2][0]) / det;
+	inv.m[2][2] = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det;
+
+	return inv;
+}
+
+__host__ __device__ mat3x3& mat3x3::inverse()
+{
+	*this = this->inversed();
+	return *this;
+}
+
+__host__ __device__ mat3x3 mat3x3::transposed() const
+{
+	mat3x3 result;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			result.m[j][i] = this->m[i][j];
+		}
+	}
+
+	return result;
+}
+
+__host__ __device__ mat3x3& mat3x3::transpose()
+{
+	*this = this->transposed();
+	return *this;
 }
