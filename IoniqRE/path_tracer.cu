@@ -203,9 +203,15 @@ void path_tracer::end_frame()
 
 __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 {
+	const float t_min = 0.011f, t_max = 99.99f;
+	hit_record final_hr;
+	float t = t_max;
+	iqvec final_color;
+
 	for (UINT i = 0; i < packet.num_drawcalls[mesh::type::TRIANGLES]; i++) {
 		const UINT mesh_id = packet.tri_mesh_dcs[i].mesh_id;
 		const iqmat transform = packet.tri_mesh_dcs[i].transform;
+		const iqmat normal_matrix = iqmat::load3x3(transform.store3x3().inverse().transpose());
 
 		const scene::gpu_packet::tri_mesh m = packet.tri_meshes[mesh_id];
 		for (UINT j = 0; j < m.num_indices; j += 3) {
@@ -213,10 +219,18 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 			iqvec v0 = iqvec::load(m.vertices[m.indices[j + 0]].pos, iqvec::usage::POINT).transform(transform);
 			iqvec v1 = iqvec::load(m.vertices[m.indices[j + 1]].pos, iqvec::usage::POINT).transform(transform);
 			iqvec v2 = iqvec::load(m.vertices[m.indices[j + 2]].pos, iqvec::usage::POINT).transform(transform);
+			iqvec n0 = iqvec::load(m.vertices[m.indices[j + 0]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
+			iqvec n1 = iqvec::load(m.vertices[m.indices[j + 1]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
+			iqvec n2 = iqvec::load(m.vertices[m.indices[j + 2]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
 
-			triangle tr(v0, v1, v2);
-			if (tr.intersect(r)) {
-				return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+			// add normals here
+			triangle tr(v0, v1, v2, n0, n1, n2);
+			hit_record hr;
+			if (tr.intersect(r, &hr)) {
+				if (hr.t < t) {
+					final_color = 0.5f * hr.n + 0.5f;
+					t = hr.t;
+				}
 			}
 		}
 	}
@@ -224,14 +238,23 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 	// TODO: add here intersection intersection checks for other shape primitives
 	for (UINT i = 0; i < packet.num_drawcalls[mesh::type::SPHERES]; i++) {
 		sphere s(packet.sphere_dcs[i].center, packet.sphere_dcs[i].radius);
-		if (s.intersect(r)) {
-			return iqvec(1.0f, 0.0f, 0.0f, 0.0f);
+
+		hit_record hr;
+		if (s.intersect(r, &hr)) {
+			if (hr.t < t) {
+				final_color = 0.5f * hr.n + 0.5f;
+				t = hr.t;
+			}
 		}
 	}
 
+	if (t_min < t && t < t_max) {
+		return final_color;
+	}
+
 	iqvec dir = r.direction().normalize3();
-	const float t = (dir.y + 1.0f) * 0.5f;
-	return (1.0f - t) * iqvec(1.0f) + t * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+	const float a = (dir.y + 1.0f) * 0.5f;
+	return (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 }
 
 __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, camera* cam, scene::gpu_packet packet, curandState* rand_states)
