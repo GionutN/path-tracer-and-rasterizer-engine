@@ -43,7 +43,18 @@ public:
 
 		// TODO: add cylinders, parabolas and toruses
 	};
+private:
+	struct host_packet_mirror
+	{
+		struct tri_mesh_mirror {
+			vertex* vertices;
+			UINT* indices;
+			UINT num_indices;
+			UINT num_vertices;
+		} *tri_meshes;
+	};
 
+public:
 	struct model_comparator
 	{
 		bool operator()(const model* a, const model* b) const {
@@ -51,7 +62,7 @@ public:
 				return a->get_mesh_name() < b->get_mesh_name();
 			}
 
-			// tie braker to allow models with the same name
+			// tie breaker to allow models with the same name
 			return a < b;
 		}
 	};
@@ -84,6 +95,7 @@ private:
 	std::array<UINT, mesh::type::NUMTYPES> m_model_types;
 
 	mutable bool m_modified = true;	// if the scene changes, update the gpu packet
+	mutable host_packet_mirror m_host_pkt;	// use these to have a copy on the cpu side of some gpu pointers for freeing
 
 	// new scene data members
 	std::map<std::string, mesh> m_meshes;	// will be used for instancing

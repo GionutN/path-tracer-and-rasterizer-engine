@@ -186,8 +186,11 @@ scene::gpu_packet scene::build_packet() const
 	gpu_packet::tri_mesh_drawcall* tri_mesh_dcs = nullptr;
 	gpu_packet::sphere_drawcall* sphere_dcs = nullptr;
 
+	m_host_pkt.tri_meshes = nullptr;
+
 	if (pkt.num_tri_meshes != 0) {
 		RENDERER_THROW_CUDA(cudaMalloc((void**)&tri_meshes, pkt.num_tri_meshes * sizeof(gpu_packet::tri_mesh)));
+		m_host_pkt.tri_meshes = new host_packet_mirror::tri_mesh_mirror[pkt.num_tri_meshes];
 	}
 	for (UINT i = 0; i < pkt.num_tri_meshes; i++) {
 		vertex* vertices;
@@ -195,7 +198,13 @@ scene::gpu_packet scene::build_packet() const
 		RENDERER_THROW_CUDA(cudaMalloc((void**)&vertices, pkt.tri_meshes[i].num_vertices * sizeof(vertex)));
 		RENDERER_THROW_CUDA(cudaMalloc((void**)&indices,  pkt.tri_meshes[i].num_indices * sizeof(UINT)));
 		RENDERER_THROW_CUDA(cudaMemcpy(vertices, pkt.tri_meshes[i].vertices, pkt.tri_meshes[i].num_vertices * sizeof(vertex), cudaMemcpyHostToDevice));
-		RENDERER_THROW_CUDA(cudaMemcpy(indices, pkt.tri_meshes[i].indices,   pkt.tri_meshes[i].num_indices * sizeof(UINT), cudaMemcpyHostToDevice));
+		RENDERER_THROW_CUDA(cudaMemcpy(indices,  pkt.tri_meshes[i].indices,  pkt.tri_meshes[i].num_indices * sizeof(UINT), cudaMemcpyHostToDevice));
+
+		// have a copy to the pointers
+		m_host_pkt.tri_meshes[i].vertices = vertices;
+		m_host_pkt.tri_meshes[i].indices = indices;
+		m_host_pkt.tri_meshes[i].num_vertices = pkt.tri_meshes[i].num_vertices;
+		m_host_pkt.tri_meshes[i].num_indices = pkt.tri_meshes[i].num_indices;
 
 		// delete the cpu side data, no longer needed
 		delete[] pkt.tri_meshes[i].vertices;
@@ -208,7 +217,8 @@ scene::gpu_packet scene::build_packet() const
 		RENDERER_THROW_CUDA(cudaMemcpy(&tri_meshes[i].indices, &indices, sizeof(size_t), cudaMemcpyHostToDevice));
 	}
 	if (pkt.num_tri_meshes != 0) {
-		delete[] pkt.tri_meshes; pkt.tri_meshes = tri_meshes;
+		delete[] pkt.tri_meshes;
+		pkt.tri_meshes = tri_meshes;
 	}
 
 	if (pkt.num_drawcalls[mesh::type::TRIANGLES] != 0) {
@@ -239,13 +249,16 @@ void scene::free_packet(gpu_packet* pkt) const
 	}
 
 	for (UINT i = 0; i < pkt->num_tri_meshes; i++) {
-		RENDERER_THROW_CUDA(cudaFree(pkt->tri_meshes[i].vertices));
-		RENDERER_THROW_CUDA(cudaFree(pkt->tri_meshes[i].indices));
-		pkt->tri_meshes[i].vertices = nullptr;
-		pkt->tri_meshes[i].indices = nullptr;
+		// free the pointers using the host mirror of the packet
+		RENDERER_THROW_CUDA(cudaFree(m_host_pkt.tri_meshes[i].vertices));
+		RENDERER_THROW_CUDA(cudaFree(m_host_pkt.tri_meshes[i].indices));
+		m_host_pkt.tri_meshes[i].indices = nullptr;
+		m_host_pkt.tri_meshes[i].vertices = nullptr;
 	}
 	if (pkt->num_tri_meshes != 0) {
 		RENDERER_THROW_CUDA(cudaFree(pkt->tri_meshes));
 		pkt->tri_meshes = nullptr;
+		delete[] m_host_pkt.tri_meshes;
+		m_host_pkt.tri_meshes = nullptr;
 	}
 }
