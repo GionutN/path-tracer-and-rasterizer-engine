@@ -7,6 +7,8 @@
 
 #include "camera.h"
 
+struct hit_record;
+
 class path_tracer : public renderer_template
 {
 public:
@@ -28,6 +30,7 @@ public:
 	void draw_scene(const scene& scene, std::vector<shader>& shaders, float dt) override;
 
 	__device__ static iqvec ray_color(const ray& r, scene::gpu_packet packet);
+	__device__ static iqvec pixel_shader(const ray& r, const hit_record& hr);
 
 	inline void reset() { m_pending_reset = true; }
 

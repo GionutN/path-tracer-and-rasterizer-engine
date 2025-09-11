@@ -8,7 +8,8 @@ cbuffer transform_cbuff
 
 struct vs_out
 {
-	float4 col : COLOR;
+	float3 frag_pos : FRAG_POSITION;
+	float3 world_normal : WORLD_NORMAL;
 	float4 pos : SV_POSITION;
 };
 
@@ -16,10 +17,11 @@ vs_out main(float3 pos : POSITION, float3 norm : NORMAL)
 {
 	vs_out vs;
 	vs.pos = mul(float4(pos, 1.0f), model);
+	vs.frag_pos = float3(vs.pos.x, vs.pos.y, vs.pos.z);
+
 	vs.pos = mul(vs.pos, view);
 	vs.pos = mul(vs.pos, projection);
 
-	float3 world_normal = normalize(mul(normal_mat, norm));
-	vs.col = float4(0.5f * world_normal + 0.5f, 1.0f);
+	vs.world_normal = normalize(mul(normal_mat, norm));
 	return vs;
 }

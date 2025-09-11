@@ -228,7 +228,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 			hit_record hr;
 			if (tr.intersect(r, &hr)) {
 				if (hr.t < t) {
-					final_color = 0.5f * hr.n + 0.5f;
+					final_color = pixel_shader(r, hr);
 					t = hr.t;
 				}
 			}
@@ -242,7 +242,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 		hit_record hr;
 		if (s.intersect(r, &hr)) {
 			if (hr.t < t) {
-				final_color = 0.5f * hr.n + 0.5f;
+				final_color = pixel_shader(r, hr);
 				t = hr.t;
 			}
 		}
@@ -255,6 +255,25 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
 	iqvec dir = r.direction().normalize3();
 	const float a = (dir.y + 1.0f) * 0.5f;
 	return (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+}
+
+__device__ iqvec path_tracer::pixel_shader(const ray& r, const hit_record& hr)
+{
+	iqvec light_color = 1.0f;
+	iqvec ambient_color(0.62f, 0.84f, 1.0f, 0.0f);	// this is the clear color
+	iqvec albedo(1.0f, 0.0f, 0.0f, 0.0f);
+	iqvec final_color = 0.0f;
+	float ambient_strength = 0.2f;
+
+	iqvec ambient = ambient_strength * ambient_color;
+
+	iqvec light_dir = iqvec(1.0f, 0.0f, 1.0f, 0.0f).normalize3();
+	float diffuse = fmaxf(-hr.n.dot3(light_dir), 0.0f);
+	iqvec diffuse_col = diffuse * light_color;
+
+	final_color = (ambient + diffuse_col).hadamard(albedo);
+
+	return final_color;
 }
 
 __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, camera* cam, scene::gpu_packet packet, curandState* rand_states)
@@ -321,6 +340,8 @@ void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, f
 		}
 		// reset the buffer when the kernel is not running
 		if (m_pending_reset) {
+			//scene.free_packet(&d_packet);
+			//d_packet = scene.build_packet();
 			RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, m_fbsize));
 			m_crt_frame = 0;
 			m_pending_reset = false;

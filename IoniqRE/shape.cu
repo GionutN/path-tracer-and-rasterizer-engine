@@ -33,7 +33,7 @@ __device__ bool sphere::intersect(const ray& r, hit_record* hr)
 	hr->t = t;
 	hr->p = r.at(t);
 	hr->n = (hr->p - m_position) / m_radius;
-	hr->front_face = r.direction().dot3(hr->n) > 0.0f;
+	hr->front_face = r.direction().dot3(hr->n) < 0.0f;
 	if (!hr->front_face) {
 		hr->n = -hr->n;
 	}
@@ -49,7 +49,7 @@ __device__ triangle::triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2,
 {
 }
 
-triangle::triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2, const iqvec& n0, const iqvec& n1, const iqvec& n2)
+__device__ triangle::triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2, const iqvec& n0, const iqvec& n1, const iqvec& n2)
 	:
 	m_v0(v0), m_v1(v1), m_v2(v2),
 	m_n0(n0), m_n1(n1), m_n2(n2)

@@ -12,7 +12,8 @@ application::application(const ref<window>& wnd)
 	:
 	m_wnd(wnd)
 {
-	cudaMallocManaged<camera>(&cam, sizeof(camera));
+	cudaError cderr;
+	RENDERER_THROW_CUDA(cudaMallocManaged<camera>(&cam, sizeof(camera)));
 	*cam = camera(wnd->width, wnd->height);
 
 	timer::init();
@@ -25,8 +26,8 @@ application::application(const ref<window>& wnd)
 	scn.add_mesh("cube", cube());
 	scn.add_mesh("sphere", uv_sphere(false, 128, 64));	// the path tracer is not yet optimised, keep the vertex count low 
 
-	scn.add_model("main", model("sphere"));
-	scn.get_model("main").set_transforms(1.0f, iqvec(pi_div_4, 0.0f, 0.0f, 0.0f), 0.0f);
+	scn.add_model("main", model("cube"));
+	scn.get_model("main").set_transforms(1.0f, iqvec(pi_div_4, 0.0f, pi_div_4, 0.0f), 0.0f);
 
 	// TODO:
 	// add normals to the path tracer
@@ -37,11 +38,13 @@ application::application(const ref<window>& wnd)
 
 application::~application()
 {
+	cudaError cderr;
+
 	renderer::shutdown();
 	random::shutdown();
 	timer::shutdown();
 
-	cudaFree(cam);
+	RENDERER_THROW_CUDA(cudaFree(cam));
 }
 
 bool application::process_message()
@@ -82,9 +85,9 @@ void application::update_frame()
 		renderer::get()->reset();
 	}
 
-	radians += dt;
-	radians = std::fmodf(radians, tau);
-	scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
+	//radians += dt;
+	//radians = std::fmodf(radians, tau);
+	//scn.get_model("main").set_rotation(iqvec(radians, 0.0f, radians, 0.0f));
 }
 
 void application::draw_frame()
