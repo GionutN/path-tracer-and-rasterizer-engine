@@ -23,8 +23,8 @@ private:
 	uint16_t m_height;
 	float m_fovh;
 
-	iqvec m_position = iqvec(0.0f, 0.0f, -3.0f, 0.0f);
-	iqvec m_forward = iqvec(0.0f, 0.0f, 1.0f, 0.0f);
+	iqvec m_position = iqvec(0.0f, 0.5f, -3.0f, 0.0f);
+	iqvec m_forward = iqvec(0.0f, -0.5f, 3.0f, 0.0f);
 
 	iqmat m_view;
 	iqmat m_projection;

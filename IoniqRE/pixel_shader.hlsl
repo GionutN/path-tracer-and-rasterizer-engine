@@ -8,7 +8,7 @@ float4 main(float3 frag_pos : FRAG_POSITION, float3 wn : WORLD_NORMAL) : SV_TARG
 
 	float3 ambient = ambient_strength * ambient_color;
 
-	float3 light_dir = normalize(float3(1.0f, 0.0f, 1.0f));
+	float3 light_dir = normalize(float3(0.0f, -1.0f, 0.0f));
 	float diffuse = max(dot(-wn, light_dir), 0.0f);
 	float3 diffuse_col = diffuse * light_color;
 
