@@ -25,10 +25,9 @@ application::application(const ref<window>& wnd)
 	scn.add_mesh("default", tri());
 	scn.add_mesh("cube", cube());
 	scn.add_mesh("sphere", uv_sphere(false, 128, 64));	// the path tracer is not yet optimised, keep the vertex count low 
-	scn.add_mesh("plane", quad());
 
-	scn.add_model("ground", model("plane"));
-	scn.get_model("ground").set_transforms(10.0f, iqvec(pi_div_2, 0.0f, 0.0f, 0.0f), 0.0f);
+	scn.add_model("ground", model("sphere"));
+	scn.get_model("ground").set_transforms(10.0f, iqvec(pi_div_2, 0.0f, 0.0f, 0.0f), iqvec(0.0f, -10.0f, 0.0f, 0.0f));
 	scn.add_model("sph", model("sphere"));
 	scn.get_model("sph").set_transforms(0.5f, 0.0f, iqvec(0.0f, 0.5f, 0.0f, 0.0f));
 	scn.add_model("wall", model("cube"));

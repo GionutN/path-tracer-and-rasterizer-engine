@@ -10,7 +10,7 @@ __device__ sphere::sphere(const iqvec& pos, float radius)
 {
 }
 
-__device__ bool sphere::intersect(const ray& r, hit_record* hr)
+__device__ bool sphere::intersect(const ray& r, float t_min, float t_max, hit_record* hr)
 {
 	// the coefficient of t^2 is 1 because the ray direction is normalized
 	const iqvec oc = m_position - r.origin();
@@ -23,9 +23,12 @@ __device__ bool sphere::intersect(const ray& r, hit_record* hr)
 		return false;
 	}
 	float t = halfb - sqrtf(delta);
-	if (t < 0.0f) {
+	if (t_max < t) {
+		return false;
+	}
+	if (t < t_min) {
 		t = halfb + sqrtf(delta);
-		if (t < 0.0f) {
+		if (t < t_min) {
 			return false;
 		}
 	}
@@ -56,7 +59,7 @@ __device__ triangle::triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2,
 {
 }
 
-__device__ bool triangle::intersect(const ray& r, hit_record* hr)
+__device__ bool triangle::intersect(const ray& r, float t_min, float t_max, hit_record* hr)
 {
 #if MOLLER_TRUMBORE
 	const iqvec v0v1 = m_v1 - m_v0;
@@ -73,21 +76,26 @@ __device__ bool triangle::intersect(const ray& r, hit_record* hr)
 	det = 1 / det;
 	iqvec tvec = r.origin() - m_v0;
 	const float u = tvec.dot3(pvec) * det;
-	if (u < 0 || u > 1) {
+	if (u < 0.0f || u > 1.0f) {
 		return false;
 	}
 
 	iqvec qvec = tvec.cross3(v0v1);
 	const float v = r.direction().dot3(qvec) * det;
-	if (v < 0 || u + v > 1) {
+	if (v < 0.0f || u + v > 1.0f) {
 		return false;
 	}
 
 	const float t = v0v2.dot3(qvec) * det;
+	if (t < t_min || t_max < t) {
+		return false;
+	}
+
 	hr->t = t;
 	hr->p = r.at(t);
-	hr->n = u * m_n0 + v * m_n1 + (1 - u - v) * m_n2;
-	hr->front_face = det > 0.0f;
+	hr->n = (1.0f - u - v) * m_n0 + u * m_n1 + v * m_n2;
+	hr->n.normalize3();
+	hr->front_face = r.direction().dot3(v0v1.cross3(v0v2)) < 0.0f;
 	if (!hr->front_face) {
 		hr->n = -hr->n;
 	}

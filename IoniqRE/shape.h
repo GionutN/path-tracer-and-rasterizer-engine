@@ -13,7 +13,7 @@ struct hit_record
 class shape
 {
 public:
-	__device__ virtual bool intersect(const ray& r, hit_record* hr) = 0;
+	__device__ virtual bool intersect(const ray& r, float t_min, float t_max, hit_record* hr) = 0;
 };
 
 class sphere : public shape
@@ -21,7 +21,7 @@ class sphere : public shape
 public:
 	__device__ sphere(const iqvec& pos, float radius);
 
-	__device__ bool intersect(const ray& r, hit_record* hr) override;
+	__device__ bool intersect(const ray& r, float t_min, float t_max, hit_record* hr) override;
 
 private:
 	iqvec m_position;
@@ -36,7 +36,7 @@ public:
 	__device__ triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2, const iqvec& n);
 	__device__ triangle(const iqvec& v0, const iqvec& v1, const iqvec& v2, const iqvec& n0, const iqvec& n1, const iqvec& n2);
 
-	__device__ bool intersect(const ray& r, hit_record* hr) override;
+	__device__ bool intersect(const ray& r, float t_min, float t_max, hit_record* hr) override;
 
 private:
 	iqvec m_v0, m_v1, m_v2;	// vertex positions

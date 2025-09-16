@@ -220,61 +220,81 @@ __device__ iqvec path_tracer::pixel_shader(const ray& r, const hit_record& hr)
 	return final_color;
 }
 
-__device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet)
+__device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, curandState* local_state)
 {
-	const float t_min = 0.011f, t_max = 99.99f;
-	hit_record final_hr;
-	float t = t_max;
-	iqvec final_color;
+	const int max_depth = 5;
+	const float t_min = 0.000001f, t_max = 999.99f;
 
-	for (UINT i = 0; i < packet.num_drawcalls[mesh::type::TRIANGLES]; i++) {
-		const UINT mesh_id = packet.tri_mesh_dcs[i].mesh_id;
-		const iqmat transform = packet.tri_mesh_dcs[i].transform;
-		const iqmat normal_matrix = iqmat::load3x3(transform.store3x3().inverse().transpose());
+	iqvec ray_colors[max_depth] = { 0.0f };
+	ray crt_ray = r;
 
-		const scene::gpu_packet::tri_mesh m = packet.tri_meshes[mesh_id];
-		for (UINT j = 0; j < m.num_indices; j += 3) {
-			// in CW order
-			iqvec v0 = iqvec::load(m.vertices[m.indices[j + 0]].pos, iqvec::usage::POINT).transform(transform);
-			iqvec v1 = iqvec::load(m.vertices[m.indices[j + 1]].pos, iqvec::usage::POINT).transform(transform);
-			iqvec v2 = iqvec::load(m.vertices[m.indices[j + 2]].pos, iqvec::usage::POINT).transform(transform);
-			iqvec n0 = iqvec::load(m.vertices[m.indices[j + 0]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
-			iqvec n1 = iqvec::load(m.vertices[m.indices[j + 1]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
-			iqvec n2 = iqvec::load(m.vertices[m.indices[j + 2]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
+	int crt_depth;
 
-			// add normals here
-			triangle tr(v0, v1, v2, n0, n1, n2);
-			hit_record hr;
-			if (tr.intersect(r, &hr)) {
-				if (hr.t < t) {
-					t = hr.t;
+	// to avoid recursion, go through the rays and add them to a stack
+	for (crt_depth = 0; crt_depth < max_depth; crt_depth++) {
+		hit_record final_hr;
+		float closest_hit = t_max;
+		bool hit = false;
+
+		for (UINT i = 0; i < packet.num_drawcalls[mesh::type::TRIANGLES]; i++) {
+			const UINT mesh_id = packet.tri_mesh_dcs[i].mesh_id;
+			const iqmat transform = packet.tri_mesh_dcs[i].transform;
+			const iqmat normal_matrix = iqmat::load3x3(transform.store3x3().transpose().inverse());
+
+			const scene::gpu_packet::tri_mesh m = packet.tri_meshes[mesh_id];
+			for (UINT j = 0; j < m.num_indices; j += 3) {
+				// in CW order
+				iqvec v0 = iqvec::load(m.vertices[m.indices[j + 0]].pos, iqvec::usage::POINT).transform(transform);
+				iqvec v1 = iqvec::load(m.vertices[m.indices[j + 1]].pos, iqvec::usage::POINT).transform(transform);
+				iqvec v2 = iqvec::load(m.vertices[m.indices[j + 2]].pos, iqvec::usage::POINT).transform(transform);
+				iqvec n0 = iqvec::load(m.vertices[m.indices[j + 0]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
+				iqvec n1 = iqvec::load(m.vertices[m.indices[j + 1]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
+				iqvec n2 = iqvec::load(m.vertices[m.indices[j + 2]].normal, iqvec::usage::DIRECTION).transform(normal_matrix);
+
+				// add normals here
+				triangle tr(v0, v1, v2, n0, n1, n2);
+				hit_record hr;
+				if (tr.intersect(crt_ray, t_min, closest_hit, &hr)) {
+					closest_hit = hr.t;
 					final_hr = hr;
+					hit = true;
 				}
 			}
 		}
-	}
 
-	// TODO: add here intersection checks for other shape primitives
-	for (UINT i = 0; i < packet.num_drawcalls[mesh::type::SPHERES]; i++) {
-		sphere s(packet.sphere_dcs[i].center, packet.sphere_dcs[i].radius);
+		// TODO: add here intersection checks for other shape primitives
+		for (UINT i = 0; i < packet.num_drawcalls[mesh::type::SPHERES]; i++) {
+			sphere s(packet.sphere_dcs[i].center, packet.sphere_dcs[i].radius);
 
-		hit_record hr;
-		if (s.intersect(r, &hr)) {
-			if (hr.t < t) {
-				t = hr.t;
+			hit_record hr;
+			if (s.intersect(crt_ray, t_min, closest_hit, &hr)) {
+				closest_hit = hr.t;
 				final_hr = hr;
+				hit = true;
 			}
 		}
+
+		if (hit) {
+			ray_colors[crt_depth] = 0.5f;
+			crt_ray = ray(final_hr.p + 0.0001f * final_hr.n, random::on_unit_hemisphere(local_state, final_hr.n));
+		}
+		else {
+			iqvec dir = crt_ray.direction();
+			const float a = (dir.y + 1.0f) * 0.5f;
+			ray_colors[crt_depth++] = (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+			break;
+		}
+			
 	}
 
-	if (t_min < t && t < t_max) {
-		final_color = pixel_shader(r, final_hr);
-		return final_color;
+	// finally go backwards in the stack to get the final color
+	iqvec final_color = ray_colors[crt_depth - 1];
+	for (int depth = crt_depth - 2; depth >= 0; depth--) {
+		final_color = final_color.hadamard(ray_colors[depth]);
 	}
 
-	iqvec dir = r.direction().normalize3();
-	const float a = (dir.y + 1.0f) * 0.5f;
-	return (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+	return final_color;
+	
 }
 
 __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, camera* cam, scene::gpu_packet packet, curandState* rand_states)
@@ -289,11 +309,11 @@ __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, c
 	curandState* local_state = &rand_states[pixelid];
 
 	iqvec path_color;
-	int samples = 4;
+	int samples = 1;
 	for (int i = 0; i < samples; i++) {
 		ray r = cam->get_ray(x, y, local_state);
 
-		iqvec color = path_tracer::ray_color(r, packet);
+		iqvec color = path_tracer::ray_color(r, packet, local_state);
 		color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
 		color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
 		color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
@@ -302,9 +322,9 @@ __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, c
 	path_color /= samples;
 
 	path_tracer::pixel p;
-	p.r = (uint8_t)(255.0f * path_color.x);
-	p.g = (uint8_t)(255.0f * path_color.y);
-	p.b = (uint8_t)(255.0f * path_color.z);
+	p.r = (uint8_t)(255.0f * sqrtf(path_color.x));
+	p.g = (uint8_t)(255.0f * sqrtf(path_color.y));
+	p.b = (uint8_t)(255.0f * sqrtf(path_color.z));
 	p.a = 255;
 
 	// add the computed color to the accumulation buffer
@@ -324,7 +344,7 @@ void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, f
 	// let the compute kernel run for half a second, then retrieve the computed image
 	// there is a problem here, the timer gets updated only when the currently selected engine is the path tracer
 	// on engine switch to this one, the kernel call must happen right away
-	if (time > 0.5f) {
+	if (time > 0.25f) {
 		time = 0.0f;
 
 		// copy the framebuffer from device to host
