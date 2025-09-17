@@ -72,6 +72,9 @@
     <CudaCompile Include="camera.cu">
       <Filter>src</Filter>
     </CudaCompile>
+    <CudaCompile Include="material.cu">
+      <Filter>src</Filter>
+    </CudaCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ioniq_windows.h">
@@ -144,6 +147,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="camera.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="material.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

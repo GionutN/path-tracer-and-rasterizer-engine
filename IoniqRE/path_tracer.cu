@@ -4,6 +4,8 @@
 #include <device_launch_parameters.h>
 
 #include "random.h"
+#include "material.h"
+#include "iqmath.h"
 
 static constexpr UINT threads = 16;
 
@@ -128,7 +130,9 @@ path_tracer::path_tracer(camera* cam)
 	m_host_pixel_buffer = new pixel[m_num_pixels];
 	memset(m_host_pixel_buffer, 0, m_fbsize);
 	// clear the accumulated device pixel buffer
+	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_linear_color_buffer, 4 * m_fbsize));	// 4 floats per channel insted of 1
 	RENDERER_THROW_CUDA(cudaMemset(m_dev_pixel_buffer, 0, m_fbsize));
+	RENDERER_THROW_CUDA(cudaMemset(m_dev_linear_color_buffer, 0, 4 * m_fbsize));
 	m_crt_frame = 0ui64;
 	
 	RENDERER_THROW_CUDA(cudaMalloc((void**)&m_dev_rand_state, m_num_pixels * sizeof(curandState)));
@@ -143,6 +147,10 @@ path_tracer::~path_tracer()
 	if (m_dev_pixel_buffer) {
 		cudaFree(m_dev_pixel_buffer);
 		m_dev_pixel_buffer = nullptr;
+	}
+	if (m_dev_linear_color_buffer) {
+		cudaFree(m_dev_linear_color_buffer);
+		m_dev_linear_color_buffer = nullptr;
 	}
 	if (m_host_pixel_buffer) {
 		delete[] m_host_pixel_buffer;
@@ -225,10 +233,13 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 	const int max_depth = 5;
 	const float t_min = 0.000001f, t_max = 999.99f;
 
-	iqvec ray_colors[max_depth] = { 0.0f };
+	//iqvec ray_colors[max_depth] = { 0.0f };
+	per_ray_weight ray_stack[max_depth] = {};
 	ray crt_ray = r;
 
 	int crt_depth;
+
+	diffuse mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f));
 
 	// to avoid recursion, go through the rays and add them to a stack
 	for (crt_depth = 0; crt_depth < max_depth; crt_depth++) {
@@ -257,6 +268,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 				if (tr.intersect(crt_ray, t_min, closest_hit, &hr)) {
 					closest_hit = hr.t;
 					final_hr = hr;
+					final_hr.mat = &mat;
 					hit = true;
 				}
 			}
@@ -270,34 +282,48 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 			if (s.intersect(crt_ray, t_min, closest_hit, &hr)) {
 				closest_hit = hr.t;
 				final_hr = hr;
+				final_hr.mat = &mat;
 				hit = true;
 			}
 		}
 
 		if (hit) {
-			ray_colors[crt_depth] = 0.5f;
-			crt_ray = ray(final_hr.p + 0.0001f * final_hr.n, random::on_unit_hemisphere(local_state, final_hr.n));
+			ray r_out;
+			if (final_hr.mat->scatter(crt_ray, final_hr, &ray_stack[crt_depth].bsdf_val, &r_out, local_state)) {
+				ray_stack[crt_depth].pdf_val = 1.0f / tau;
+				ray_stack[crt_depth].cos_law_weight = fmaxf(0.0f, final_hr.n.dot3(r_out.direction()));
+				crt_ray = r_out;
+			}
+			else {
+				crt_depth++;
+				ray_stack[crt_depth].pdf_val = 1.0f;
+				ray_stack[crt_depth].cos_law_weight = 1.0f;
+				break;
+			}
 		}
 		else {
 			iqvec dir = crt_ray.direction();
 			const float a = (dir.y + 1.0f) * 0.5f;
-			ray_colors[crt_depth++] = (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+			ray_stack[crt_depth].bsdf_val = (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+			ray_stack[crt_depth].pdf_val = 1.0f;
+			ray_stack[crt_depth].cos_law_weight = 1.0f;
+			crt_depth++;
 			break;
 		}
 			
 	}
 
 	// finally go backwards in the stack to get the final color
-	iqvec final_color = ray_colors[crt_depth - 1];
+	iqvec final_color = ray_stack[crt_depth - 1].cos_law_weight / ray_stack[crt_depth - 1].pdf_val * ray_stack[crt_depth - 1].bsdf_val;
 	for (int depth = crt_depth - 2; depth >= 0; depth--) {
-		final_color = final_color.hadamard(ray_colors[depth]);
+		final_color = final_color.hadamard(ray_stack[depth].cos_law_weight / ray_stack[depth].pdf_val * ray_stack[depth].bsdf_val);
 	}
 
 	return final_color;
 	
 }
 
-__global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, camera* cam, scene::gpu_packet packet, curandState* rand_states)
+__global__ static void render_kernel(path_tracer::pixel* fb, iqvec* lin_fb, size_t num_frame, camera* cam, scene::gpu_packet packet, curandState* rand_states)
 {
 	const UINT y = threadIdx.y + blockIdx.y * blockDim.y;
 	const UINT x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -321,17 +347,17 @@ __global__ static void render_kernel(path_tracer::pixel* fb, size_t num_frame, c
 	}
 	path_color /= samples;
 
-	path_tracer::pixel p;
-	p.r = (uint8_t)(255.0f * sqrtf(path_color.x));
-	p.g = (uint8_t)(255.0f * sqrtf(path_color.y));
-	p.b = (uint8_t)(255.0f * sqrtf(path_color.z));
-	p.a = 255;
+	// have the float buffer as accumulator to avoid losing information when casting to uint8_t
+	lin_fb[pixelid].x = (path_color.x + lin_fb[pixelid].x * (num_frame - 1)) / num_frame;
+	lin_fb[pixelid].y = (path_color.y + lin_fb[pixelid].y * (num_frame - 1)) / num_frame;
+	lin_fb[pixelid].z = (path_color.z + lin_fb[pixelid].z * (num_frame - 1)) / num_frame;
 
-	// add the computed color to the accumulation buffer
-	fb[pixelid].r = (uint8_t)(((float)p.r + (float)fb[pixelid].r * (num_frame - 1)) / num_frame);
-	fb[pixelid].g = (uint8_t)(((float)p.g + (float)fb[pixelid].g * (num_frame - 1)) / num_frame);
-	fb[pixelid].b = (uint8_t)(((float)p.b + (float)fb[pixelid].b * (num_frame - 1)) / num_frame);
-	fb[pixelid].a = p.a;
+	path_tracer::pixel p;
+	p.r = (uint8_t)(255.0f * sqrtf(lin_fb[pixelid].x));
+	p.g = (uint8_t)(255.0f * sqrtf(lin_fb[pixelid].y));
+	p.b = (uint8_t)(255.0f * sqrtf(lin_fb[pixelid].z));
+	p.a = 255;
+	fb[pixelid] = p;
 }
 
 void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, float dt)
@@ -368,6 +394,6 @@ void path_tracer::draw_scene(const scene& scene, std::vector<shader>& shaders, f
 			m_pending_reset = false;
 		}
 		m_crt_frame++;
-		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>> (m_dev_pixel_buffer, m_crt_frame, m_camera, d_packet, m_dev_rand_state);
+		render_kernel<<<m_blocks_per_grid, m_threads_per_block>>> (m_dev_pixel_buffer, m_dev_linear_color_buffer, m_crt_frame, m_camera, d_packet, m_dev_rand_state);
 	}
 }

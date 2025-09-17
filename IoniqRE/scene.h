@@ -72,7 +72,6 @@ public:
 
 	const std::set<model*, model_comparator>& get_models() const { return m_sorted_by_mesh_name; }
 
-	void add(const mesh& m);
 	void add_mesh(const std::string& name, const mesh& m);
 	void rename_mesh(const std::string& old_name, const std::string& new_name);
 	void delete_mesh(const std::string& name);
@@ -95,7 +94,7 @@ private:
 	std::array<UINT, mesh::type::NUMTYPES> m_model_types;
 
 	mutable bool m_modified = true;	// if the scene changes, update the gpu packet
-	mutable host_packet_mirror m_host_pkt;	// use these to have a copy on the cpu side of some gpu pointers for freeing
+	mutable host_packet_mirror m_host_pkt;	// use this to have a copy on the cpu side of some gpu pointers for freeing
 
 	// new scene data members
 	std::map<std::string, mesh> m_meshes;	// will be used for instancing

@@ -2,12 +2,15 @@
 
 #include "ray.h"
 
+class material;
+
 struct hit_record
 {
 	iqvec p;
 	iqvec n;
 	float t;
 	bool front_face;
+	material* mat;
 };
 
 class shape

@@ -20,6 +20,13 @@ public:
 		uint8_t a;
 	};
 
+	struct per_ray_weight
+	{
+		iqvec bsdf_val;
+		float pdf_val;
+		float cos_law_weight;
+	};
+
 public:
 	static void init(camera* cam);
 	static void shutdown();
@@ -57,7 +64,8 @@ private:
 	camera* m_camera;
 
 	pixel* m_host_pixel_buffer;
-	pixel* m_dev_pixel_buffer;	// ever-converging, should set a limit
+	pixel* m_dev_pixel_buffer;	// the device pixel buffer in bgra8 format
+	iqvec* m_dev_linear_color_buffer;	// ever-converging, should set a limit
 	size_t m_crt_frame;	// the current traced frame
 	scene::gpu_packet d_packet;
 	bool m_image_updated;
