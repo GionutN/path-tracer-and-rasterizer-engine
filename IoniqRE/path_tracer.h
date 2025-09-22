@@ -20,13 +20,6 @@ public:
 		uint8_t a;
 	};
 
-	struct per_ray_weight
-	{
-		iqvec bsdf_val;
-		float pdf_val;
-		float cos_law_weight;
-	};
-
 public:
 	static void init(camera* cam);
 	static void shutdown();

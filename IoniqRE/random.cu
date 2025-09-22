@@ -28,18 +28,16 @@ __host__ float random::real(float min, float max)
 
 __host__ iqvec random::on_unit_sphere()
 {
-	// TODO: write an actual uniform distribution the unit sphere
 	iqvec result;
-	result.w = 0.0f;
 
-	while (true) {
-		result.x = random::real(-1.0f, 1.0f);
-		result.y = random::real(-1.0f, 1.0f);
-		result.z = random::real(-1.0f, 1.0f);
-		if (result.length3sq() < 1.0f && !result.is_null3()) {
-			return result.normalized3();
-		}
-	}
+	const float phi = random::real(0.0f, tau);
+	result.w = 0.0f;
+	result.z = random::real(-1.0f, 1.0f);	// z is cos(theta), and it must be uniformly distributed between -1 an 1
+	const float sin_theta = sqrtf(1 - result.z * result.z);
+	result.x = sin_theta * cosf(phi);
+	result.y = sin_theta * sinf(phi);
+
+	return result;
 }
 
 __host__ iqvec random::on_unit_hemisphere(const iqvec& normal)
@@ -52,6 +50,19 @@ __host__ iqvec random::on_unit_hemisphere(const iqvec& normal)
 	return -dir;
 }
 
+__host__ iqvec random::cosine_weighted()
+{
+	const float u1 = random::real();
+	const float u2 = random::real();
+
+	float phi = 2 * pi * u1;
+	float x = cosf(phi) * sqrtf(u2);
+	float y = sinf(phi) * sqrtf(u2);
+	float z = sqrtf(1.0f - u2);
+
+	return iqvec(x, y, z, 0.0f);
+}
+
 __device__ float random::real(curandState* p_rand_state, float min, float max)
 {
 	float t = curand(p_rand_state) / (float)UINT32_MAX;
@@ -60,18 +71,16 @@ __device__ float random::real(curandState* p_rand_state, float min, float max)
 
 __device__ iqvec random::on_unit_sphere(curandState* p_rand_state)
 {
-	// TODO: write an actual uniform distribution the unit sphere
 	iqvec result;
-	result.w = 0.0f;
 
-	while (true) {
-		result.x = random::real(p_rand_state, -1.0f, 1.0f);
-		result.y = random::real(p_rand_state, -1.0f, 1.0f);
-		result.z = random::real(p_rand_state, -1.0f, 1.0f);
-		if (result.length3sq() < 1.0f && !result.is_null3()) {
-			return result.normalized3();
-		}
-	}
+	const float phi = random::real(p_rand_state, 0.0f, tau);
+	result.w = 0.0f;
+	result.z = random::real(p_rand_state, -1.0f, 1.0f);	// z is cos(theta), and it must be uniformly distributed between -1 an 1
+	const float sin_theta = sqrtf(1 - result.z * result.z);
+	result.x = sin_theta * cosf(phi);
+	result.y = sin_theta * sinf(phi);
+
+	return result;
 }
 
 __device__ iqvec random::on_unit_hemisphere(curandState* p_rand_state, const iqvec& normal)
@@ -82,4 +91,17 @@ __device__ iqvec random::on_unit_hemisphere(curandState* p_rand_state, const iqv
 	}
 
 	return -dir;
+}
+
+__device__ iqvec random::cosine_weighted(curandState* p_rand_state)
+{
+	const float u1 = random::real(p_rand_state);
+	const float u2 = random::real(p_rand_state);
+
+	float phi = 2 * pi * u1;
+	float x = cosf(phi) * sqrtf(u2);
+	float y = sinf(phi) * sqrtf(u2);
+	float z = sqrtf(1.0f - u2);
+
+	return iqvec(x, y, z, 0.0f);
 }

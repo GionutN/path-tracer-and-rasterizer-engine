@@ -234,12 +234,13 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 	const float t_min = 0.000001f, t_max = 999.99f;
 
 	//iqvec ray_colors[max_depth] = { 0.0f };
-	per_ray_weight ray_stack[max_depth] = {};
+	scatter_record ray_stack[max_depth] = {};
 	ray crt_ray = r;
 
 	int crt_depth;
 
-	diffuse mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f));
+	//diffuse_uniform mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f));
+	diffuse_lambertian mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f));
 
 	// to avoid recursion, go through the rays and add them to a stack
 	for (crt_depth = 0; crt_depth < max_depth; crt_depth++) {
@@ -289,22 +290,18 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 
 		if (hit) {
 			ray r_out;
-			if (final_hr.mat->scatter(crt_ray, final_hr, &ray_stack[crt_depth].bsdf_val, &r_out, local_state)) {
-				ray_stack[crt_depth].pdf_val = 1.0f / tau;
-				ray_stack[crt_depth].cos_law_weight = fmaxf(0.0f, final_hr.n.dot3(r_out.direction()));
+			if (final_hr.mat->scatter(crt_ray, final_hr, &ray_stack[crt_depth], &r_out, local_state)) {
 				crt_ray = r_out;
 			}
 			else {
 				crt_depth++;
-				ray_stack[crt_depth].pdf_val = 1.0f;
-				ray_stack[crt_depth].cos_law_weight = 1.0f;
 				break;
 			}
 		}
 		else {
 			iqvec dir = crt_ray.direction();
 			const float a = (dir.y + 1.0f) * 0.5f;
-			ray_stack[crt_depth].bsdf_val = (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
+			ray_stack[crt_depth].attenuation = (1.0f - a) * iqvec(1.0f) + a * iqvec(0.5f, 0.7f, 1.0f, 0.0f);
 			ray_stack[crt_depth].pdf_val = 1.0f;
 			ray_stack[crt_depth].cos_law_weight = 1.0f;
 			crt_depth++;
@@ -314,9 +311,9 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 	}
 
 	// finally go backwards in the stack to get the final color
-	iqvec final_color = ray_stack[crt_depth - 1].cos_law_weight / ray_stack[crt_depth - 1].pdf_val * ray_stack[crt_depth - 1].bsdf_val;
+	iqvec final_color = ray_stack[crt_depth - 1].cos_law_weight / ray_stack[crt_depth - 1].pdf_val * ray_stack[crt_depth - 1].attenuation;
 	for (int depth = crt_depth - 2; depth >= 0; depth--) {
-		final_color = final_color.hadamard(ray_stack[depth].cos_law_weight / ray_stack[depth].pdf_val * ray_stack[depth].bsdf_val);
+		final_color = final_color.hadamard(ray_stack[depth].cos_law_weight / ray_stack[depth].pdf_val * ray_stack[depth].attenuation);
 	}
 
 	return final_color;
@@ -335,22 +332,23 @@ __global__ static void render_kernel(path_tracer::pixel* fb, iqvec* lin_fb, size
 	curandState* local_state = &rand_states[pixelid];
 
 	iqvec path_color;
-	int samples = 1;
-	for (int i = 0; i < samples; i++) {
-		ray r = cam->get_ray(x, y, local_state);
+	ray r = cam->get_ray(x, y, local_state);
 
-		iqvec color = path_tracer::ray_color(r, packet, local_state);
-		color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
-		color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
-		color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
-		path_color += color;
-	}
-	path_color /= samples;
+	iqvec color = path_tracer::ray_color(r, packet, local_state);
+	color.x = color.x > 1.0f ? 1.0f : (color.x < 0.0f ? 0.0f : color.x);
+	color.y = color.y > 1.0f ? 1.0f : (color.y < 0.0f ? 0.0f : color.y);
+	color.z = color.z > 1.0f ? 1.0f : (color.z < 0.0f ? 0.0f : color.z);
+	path_color += color;
+
+	// check for NaNs
+	if (color.x != color.x) color.x = 0.0f;
+	if (color.y != color.y) color.y = 0.0f;
+	if (color.z != color.z) color.z = 0.0f;
 
 	// have the float buffer as accumulator to avoid losing information when casting to uint8_t
-	lin_fb[pixelid].x = (path_color.x + lin_fb[pixelid].x * (num_frame - 1)) / num_frame;
-	lin_fb[pixelid].y = (path_color.y + lin_fb[pixelid].y * (num_frame - 1)) / num_frame;
-	lin_fb[pixelid].z = (path_color.z + lin_fb[pixelid].z * (num_frame - 1)) / num_frame;
+	lin_fb[pixelid].x = path_color.x / num_frame + lin_fb[pixelid].x * ((num_frame - 1) / (float)num_frame);
+	lin_fb[pixelid].y = path_color.y / num_frame + lin_fb[pixelid].y * ((num_frame - 1) / (float)num_frame);
+	lin_fb[pixelid].z = path_color.z / num_frame + lin_fb[pixelid].z * ((num_frame - 1) / (float)num_frame);
 
 	path_tracer::pixel p;
 	p.r = (uint8_t)(255.0f * sqrtf(lin_fb[pixelid].x));
