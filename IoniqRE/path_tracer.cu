@@ -230,17 +230,22 @@ __device__ iqvec path_tracer::pixel_shader(const ray& r, const hit_record& hr)
 
 __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, curandState* local_state)
 {
+	// this is the integrator
+	// the base formula is Lo = Li * bsdf * (normal.dot(wi)) / pdf
+	// Lo/i is the ray color, the bsdf value is the color returned from the surface
+	// wi is the direction from the surface of the scattered ray
+	// wo is the direction from the surface to the camera
+	// pdf is the value of the pdf with which wi was sampled wrt wo
+
 	const int max_depth = 5;
 	const float t_min = 0.000001f, t_max = 999.99f;
 
-	//iqvec ray_colors[max_depth] = { 0.0f };
 	scatter_record ray_stack[max_depth] = {};
 	ray crt_ray = r;
 
 	int crt_depth;
 
-	//diffuse_uniform mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f));
-	diffuse_lambertian mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f));
+	oren_nayar mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f), 1.0f);
 
 	// to avoid recursion, go through the rays and add them to a stack
 	for (crt_depth = 0; crt_depth < max_depth; crt_depth++) {

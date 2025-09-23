@@ -15,7 +15,7 @@ public:
 	__host__ __device__ const iqvec& v() const { return axis[1]; }
 	__host__ __device__ const iqvec& w() const { return axis[2]; }
 
-	__host__ __device__ iqvec transform(const iqvec& v) const {
+	__host__ __device__ iqvec transform_to_world(const iqvec& v) const {
 		// transform from basis coordinates to local space
 		return (v[0] * axis[0]) + (v[1] * axis[1]) + (v[2] * axis[2]);
 	}

@@ -16,9 +16,6 @@ class material
 public:
 	__device__ virtual bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const { return false; }
 
-protected:
-	__device__ virtual float pdf(const iqvec& wo) const { return 1.0f; }
-
 };
 
 class diffuse_uniform : public material
@@ -32,27 +29,30 @@ public:
 	__device__ bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const override;
 
 private:
-	__device__ float pdf(const iqvec& wo) const override { return 1 / tau; }
+	__device__ float pdf() const { return 1 / tau; }
 
 protected:
 	iqvec m_albedo;
 
 };
 
-class diffuse_lambertian : public material
+class oren_nayar : public material
 {
 public:
-	__host__ __device__ diffuse_lambertian(const iqvec& albedo)
+	__host__ __device__ oren_nayar(const iqvec& albedo, float roughness = 0.0f)
 		:
 		m_albedo(albedo)
-	{}
+	{
+		m_sigma = roughness < 0.0f ? 0.0f : (roughness > 1.0f ? 1.0f : roughness);
+	}
 
 	__device__ bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const override;
 
 private:
-	__device__ float pdf(const iqvec& wo) const override { return 1.0f; }
+	__device__ float pdf(const iqvec& wo, const iqvec& normal) const;
 
 protected:
 	iqvec m_albedo;
+	float m_sigma;
 
 };
