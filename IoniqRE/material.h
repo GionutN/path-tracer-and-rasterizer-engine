@@ -18,24 +18,6 @@ public:
 
 };
 
-class diffuse_uniform : public material
-{
-public:
-	__host__ __device__ diffuse_uniform(const iqvec& albedo)
-		:
-		m_albedo(albedo)
-	{}
-
-	__device__ bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const override;
-
-private:
-	__device__ float pdf() const { return 1 / tau; }
-
-protected:
-	iqvec m_albedo;
-
-};
-
 class oren_nayar : public material
 {
 public:
@@ -51,8 +33,25 @@ public:
 private:
 	__device__ float pdf(const iqvec& wo, const iqvec& normal) const;
 
-protected:
+private:
 	iqvec m_albedo;
 	float m_sigma;
+
+};
+
+class emissive : public material
+{
+public:
+	__host__ __device__ emissive(const iqvec& color, float strength)
+		:
+		m_albedo(color),
+		m_strength(strength)
+	{}
+
+	__device__ bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const override;
+
+private:
+	iqvec m_albedo;
+	float m_strength;
 
 };

@@ -2,16 +2,6 @@
 
 #include "onb.h"
 
-__device__ bool diffuse_uniform::scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const
-{
-	// uniform scattering
-	*r_out = ray(hr.p + 0.0001f * hr.n, random::on_unit_hemisphere(local_state, hr.n));
-	srec->attenuation = m_albedo / pi;
-	srec->pdf_val = this->pdf();
-	srec->cos_law_weight = fmaxf(0.0f, hr.n.dot3(r_out->direction()));
-	return true;
-}
-
 __device__ bool oren_nayar::scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const
 {
 	onb uvw(hr.n);
@@ -55,4 +45,13 @@ __device__ bool oren_nayar::scatter(const ray& r_in, const hit_record& hr, scatt
 __device__ float oren_nayar::pdf(const iqvec& wo, const iqvec& normal) const
 {
 	return normal.dot3(wo) / pi;
+}
+
+__device__ bool emissive::scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const
+{
+	srec->attenuation = m_strength * m_albedo;
+	srec->cos_law_weight = 1.0f;
+	srec->pdf_val = 1.0f;
+
+	return false;
 }

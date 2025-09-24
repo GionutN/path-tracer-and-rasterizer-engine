@@ -246,6 +246,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 	int crt_depth;
 
 	oren_nayar mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f), 1.0f);
+	emissive light(1.0f, 10.0f);
 
 	// to avoid recursion, go through the rays and add them to a stack
 	for (crt_depth = 0; crt_depth < max_depth; crt_depth++) {
@@ -274,7 +275,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 				if (tr.intersect(crt_ray, t_min, closest_hit, &hr)) {
 					closest_hit = hr.t;
 					final_hr = hr;
-					final_hr.mat = &mat;
+					final_hr.mat = &light;
 					hit = true;
 				}
 			}
