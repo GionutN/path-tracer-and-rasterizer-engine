@@ -247,7 +247,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 	bool hit;
 
 	oren_nayar mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f), 1.0f);
-	emissive light(1.0f, 1.0f);
+	emissive light(1.0f, 10.0f);
 	iqvec emitted = 0.0f;
 
 	// to avoid recursion, go through the rays and add them to a stack
@@ -332,7 +332,8 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 		final_color = final_color.hadamard(ray_stack[depth].cos_law_weight / ray_stack[depth].pdf_val * ray_stack[depth].attenuation);
 	}
 
-	return final_color + emitted;
+	final_color += final_color.hadamard(emitted);
+	return final_color;
 	
 }
 
