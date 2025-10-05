@@ -55,3 +55,8 @@ __device__ bool emissive::scatter(const ray& r_in, const hit_record& hr, scatter
 
 	return false;
 }
+
+__device__ iqvec emissive::emitted() const
+{
+	return m_strength * m_albedo;
+}

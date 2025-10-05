@@ -244,15 +244,17 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 	ray crt_ray = r;
 
 	int crt_depth;
+	bool hit;
 
 	oren_nayar mat(iqvec(0.5f, 0.5f, 0.5f, 0.0f), 1.0f);
-	emissive light(1.0f, 10.0f);
+	emissive light(1.0f, 1.0f);
+	iqvec emitted = 0.0f;
 
 	// to avoid recursion, go through the rays and add them to a stack
 	for (crt_depth = 0; crt_depth < max_depth; crt_depth++) {
 		hit_record final_hr;
 		float closest_hit = t_max;
-		bool hit = false;
+		hit = false;
 
 		for (UINT i = 0; i < packet.num_drawcalls[mesh::type::TRIANGLES]; i++) {
 			const UINT mesh_id = packet.tri_mesh_dcs[i].mesh_id;
@@ -300,6 +302,7 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 				crt_ray = r_out;
 			}
 			else {
+				emitted = final_hr.mat->emitted();
 				crt_depth++;
 				break;
 			}
@@ -316,13 +319,20 @@ __device__ iqvec path_tracer::ray_color(const ray& r, scene::gpu_packet packet, 
 			
 	}
 
+	if (crt_depth == 1 && !hit) {
+		return ray_stack[0].attenuation;
+	}
+	if (crt_depth == 1 && hit) {
+		return emitted;
+	}
+
 	// finally go backwards in the stack to get the final color
 	iqvec final_color = ray_stack[crt_depth - 1].cos_law_weight / ray_stack[crt_depth - 1].pdf_val * ray_stack[crt_depth - 1].attenuation;
 	for (int depth = crt_depth - 2; depth >= 0; depth--) {
 		final_color = final_color.hadamard(ray_stack[depth].cos_law_weight / ray_stack[depth].pdf_val * ray_stack[depth].attenuation);
 	}
 
-	return final_color;
+	return final_color + emitted;
 	
 }
 

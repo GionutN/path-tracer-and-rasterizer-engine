@@ -15,6 +15,7 @@ class material
 {
 public:
 	__device__ virtual bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const { return false; }
+	__device__ virtual iqvec emitted() const { return 0.0f; }
 
 };
 
@@ -49,6 +50,7 @@ public:
 	{}
 
 	__device__ bool scatter(const ray& r_in, const hit_record& hr, scatter_record* srec, ray* r_out, curandState* local_state) const override;
+	__device__ iqvec emitted() const override;
 
 private:
 	iqvec m_albedo;
