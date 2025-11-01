@@ -37,8 +37,8 @@ private:
 
 public:
 	static constexpr const char* window_class_name = "Ioniq Window Class";
-	static constexpr UINT16 width = 1920;
-	static constexpr UINT16 height = 1080;
+	static constexpr UINT16 width = 1280;
+	static constexpr UINT16 height = 720;
 
 private:
 	HWND m_hWnd;
